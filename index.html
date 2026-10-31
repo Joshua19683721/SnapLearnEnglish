@@ -2,7 +2,11 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>看圖識詞 · 互動學習教室</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3b82f6">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; background: #1e2128; color: #e8e8e8; display: flex; flex-direction: column; height: 100vh; }
@@ -197,21 +201,12 @@
         <select id="modelSel"></select>
       </div>
       <div class="field">
-        <label>文字模型（寫例句、文法用）</label>
+        <label>文字模型（寫文法用）</label>
         <select id="textModelSel"></select>
       </div>
       <div class="field" id="groqKeyField" style="display:none">
         <label>Groq API Key（雲端模型用）</label>
-        <input type="password" id="groqKey" autocomplete="new-password" placeholder="gsk_...">
-      </div>
-      <div class="field" id="orKeyField" style="display:none">
-        <label>OpenRouter API Key（免費模型用）</label>
-        <input type="password" id="orKey" autocomplete="new-password" placeholder="sk-or-v1-...">
-        <div class="hint" style="margin-top:4px">只存在這台裝置的 localStorage，不會上傳到任何伺服器。</div>
-      </div>
-      <div class="field" style="display:flex;align-items:center;gap:8px">
-        <button class="btn sm gray" style="flex:0 0 auto" onclick="refreshModelList(true)">🔄 更新模型清單</button>
-        <span id="modelCount" style="font-size:11px;color:#6b7280"></span>
+        <input type="password" id="groqKey" placeholder="gsk_...">
       </div>
       <div class="field">
         <label>標註數量</label>
@@ -240,8 +235,7 @@
       <div class="hint">
         操作：雙擊圖面加標籤；拖曳移動；Delete 刪除選取。<br>
         虛線框 = 模型沒給座標，請自己拖到正確位置。<br>
-        點擊單字或句子可發音（en-US）。<br>
-        📷 拍照會先縮成 720p（短邊 720，如 1280×720）再送視覺模型。
+        點擊單字或句子可發音（en-US）。
       </div>
     </div>
   </div>
@@ -249,9 +243,7 @@
   <!-- ============ View 2: Vocab Cards ============ -->
   <div id="view-cards" class="view">
     <div>
-      <h2>📇 單字圖卡
-        <button class="btn sm gray" style="font-size:12px;vertical-align:middle;margin-left:8px" onclick="generateExamples(labels)">🔄 重生成例句</button>
-      </h2>
+      <h2>📇 單字圖卡</h2>
       <p class="sub">點擊喇叭按鈕發音，複習每個單字的音標與中文意思。</p>
       <div id="cardsGrid" class="cards-grid">
         <div class="empty" style="grid-column:1/-1">請先上傳圖片並自動辨識</div>
@@ -276,11 +268,9 @@
             <div id="fcExample" style="margin-top:12px;padding-top:10px;border-top:1px solid #fbbf2433;width:100%;text-align:left;font-size:11px">
               <div style="color:#10b981;font-weight:bold;margin-bottom:2px">📗 基礎版</div>
               <div id="fcExampleEn" style="color:#93c5fd;cursor:pointer;font-size:12px"></div>
-              <div id="fcExampleIpa" style="color:#9ca3af;font-size:11px;margin-top:1px;font-family:monospace"></div>
               <div id="fcExampleZh" style="color:#fbbf24;font-size:11px;margin-top:1px"></div>
               <div style="color:#f59e0b;font-weight:bold;margin-top:8px;margin-bottom:2px">📘 進階版</div>
               <div id="fcAdvancedEn" style="color:#93c5fd;cursor:pointer;font-size:12px"></div>
-              <div id="fcAdvancedIpa" style="color:#9ca3af;font-size:11px;margin-top:1px;font-family:monospace"></div>
               <div id="fcAdvancedZh" style="color:#fbbf24;font-size:11px;margin-top:1px"></div>
             </div>
           </div>
@@ -335,7 +325,7 @@ const S2T = (() => { const m = Object.create(null); for (let i = 0; i + 1 < S2T_
 const WORD_FIX = [['里面','裡面'],['里边','裡邊'],['里头','裡頭'],['这里','這裡'],['那里','那裡'],['哪里','哪裡'],['心里','心裡'],['家里','家裡'],['嘴里','嘴裡'],['手里','手裡'],['夜里','夜裡'],['面包','麵包'],['面条','麵條'],['干净','乾淨'],['干燥','乾燥'],['一只','一隻'],['两只','兩隻'],['着','著']];
 function toTrad(s) { if (!s) return ''; let t = String(s); WORD_FIX.forEach(([a,b]) => { t = t.split(a).join(b); }); let out = ''; for (const ch of t) out += (S2T[ch] || ch); return out; }
 
-function normalizeIPA(s) { if (!s) return ''; let t = String(s).trim().replace(/^[\[\/]+|[\]\/]+$/g, '').replace(/\s+/g, ' ').trim(); if (!t) return ''; if (!/[a-zɑɒæʌəɜɛɪʊɔθðʃʒŋɹɾˈˌː]/.test(t)) return ''; if (t.length > 220) return ''; return '/' + t + '/'; }
+function normalizeIPA(s) { if (!s) return ''; let t = String(s).trim().replace(/^[\[\/]+|[\]\/]+$/g, '').replace(/\s+/g, ' ').trim(); if (!t) return ''; if (!/[a-zɑɒæʌəɜɛɪʊɔθðʃʒŋɹɾˈˌː]/.test(t)) return ''; if (t.length > 60) return ''; return '/' + t + '/'; }
 function toUnit(v) { if (v == null || v === '') return null; let n = Number(String(v).replace(/[^\d.\-]/g, '')); if (!isFinite(n)) return null; if (n > 1) n = (n <= 100) ? n / 100 : n / 1000; if (n < 0 || n > 1) return null; return n; }
 const GRID = {'左上':[0.18,0.20],'中上':[0.50,0.16],'右上':[0.82,0.20],'左中':[0.16,0.50],'正中':[0.50,0.50],'右中':[0.84,0.50],'左下':[0.18,0.82],'中下':[0.50,0.86],'右下':[0.82,0.82]};
 function gridToXY(pos) { if (!pos) return null; const p = String(pos).replace(/\s|　/g, ''); if (GRID[p]) return GRID[p]; for (const k in GRID) if (p.includes(k[0]) && p.includes(k[1])) return GRID[k]; return null; }
@@ -383,10 +373,6 @@ let quizQuestions = [];
 const VLM_DEFAULT = 'qwen3.5:4b';
 const TEXT_DEFAULT = 'qwen2.5:7b';
 const OLLAMA = 'http://127.0.0.1:11434';
-// 相機拍的照片先縮成 720p（短邊 720，例如 1280×720 / 960×720）再送視覺模型
-const CAMERA_SHORT_SIDE = 720;
-let imgFromCamera = false;
-let imgBase64 = '';
 
 function setStatus(msg, kind) { const el = $('status'); el.textContent = msg || '待命'; el.className = kind || ''; }
 
@@ -411,47 +397,18 @@ fileInput.addEventListener('change', handleFile);
 $('camera').addEventListener('change', handleFile);
 function handleFile(e) {
   const f = e.target.files[0]; if (!f) return;
-  const fromCamera = e.target.id === 'camera';
   const reader = new FileReader();
-  reader.onload = ev => loadImageSource(ev.target.result, fromCamera);
-  reader.readAsDataURL(f);
-  e.target.value = ''; // 重置，讓同一個檔案可以再選
-}
-
-/* 相機照片先轉 720p（長邊 1280，維持比例）再放進畫面與送去辨識 */
-function loadImageSource(src, fromCamera) {
-  imgFromCamera = !!fromCamera;
-  const probe = new Image();
-  probe.onload = () => {
-    const W = probe.naturalWidth, H = probe.naturalHeight;
-    let finalSrc = src, scaled = false;
-    if (fromCamera && Math.min(W, H) > CAMERA_SHORT_SIDE) {
-      const s = CAMERA_SHORT_SIDE / Math.min(W, H);
-      const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(W * s));
-      c.height = Math.max(1, Math.round(H * s));
-      const ctx = c.getContext('2d');
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(probe, 0, 0, c.width, c.height);
-      finalSrc = c.toDataURL('image/jpeg', 0.85);
-      scaled = true;
-    }
+  reader.onload = ev => {
     img.onload = () => {
       labels.forEach(l => l.el.remove()); labels = []; selected = null; sentence = null; grammar = null;
       renderEditor(); renderSentence(); renderGrammar();
-      const dims = `${img.naturalWidth}×${img.naturalHeight}`;
-      setStatus(scaled ? `已載入 ${dims}（相機照片已轉 720p）` : `已載入 ${dims}`, 'ok');
+      setStatus(`已載入 ${img.naturalWidth}×${img.naturalHeight}`, 'ok');
     };
-    imgBase64 = scaled ? finalSrc.split(',')[1] : '';
-    img.src = finalSrc;
+    img.src = ev.target.result;
   };
-  probe.onerror = () => { imgBase64 = ''; img.onload = () => setStatus(`已載入 ${img.naturalWidth}×${img.naturalHeight}`, 'ok'); img.src = src; };
-  probe.src = src;
+  reader.readAsDataURL(f);
+  e.target.value = ''; // 重置，讓同一個檔案可以再選
 }
-
-/* 送給視覺模型的圖：相機照片直接送 720p 那張（不再二次壓縮），其餘最多 1024 */
-function visionThumb() { return (imgFromCamera && imgBase64) ? imgBase64 : makeThumb(1024); }
 
 img.addEventListener('dblclick', e => {
   if (!img.src) { alert('請先選擇圖片'); return; }
@@ -462,12 +419,12 @@ img.addEventListener('dblclick', e => {
 /* ============================================================
    4. 標籤
    ============================================================ */
-function addLabel(x, y, en, ipa, zh, free, extra) {
+function addLabel(x, y, en, ipa, zh, free) {
   ipa = ipa || ''; zh = zh || '';
   const el = document.createElement('div');
   el.className = 'label' + (free ? ' free' : '');
   stage.appendChild(el);
-  const lab = { x: clamp01(Number(x) || 0.5), y: clamp01(Number(y) || 0.5), en, ipa, zh, free: !!free, sus: false, el, ...(extra || {}) };
+  const lab = { x: clamp01(Number(x) || 0.5), y: clamp01(Number(y) || 0.5), en, ipa, zh, free: !!free, sus: false, el };
   el.innerHTML = labelHTML(lab);
   labels.push(lab);
   positionEl(lab);
@@ -523,183 +480,64 @@ function onSize(v) { sizeScale = parseFloat(v); $('sizeVal').textContent = v; la
    ============================================================ */
 const LS = { get(k) { try { return localStorage.getItem(k); } catch(e) { return null; } }, set(k,v) { try { localStorage.setItem(k,v); } catch(e) {} } };
 async function listModels() { try { const r = await fetch(OLLAMA + '/api/tags'); if (!r.ok) return []; const d = await r.json(); return (d.models || []).map(m => m.name).sort(); } catch(e) { return []; } }
-
-const GROQ_MODELS = ['groq:qwen/qwen3.8-27b', 'groq:openai/gpt-oss-120b'];
-const OR_PREFIX = 'openrouter:';
-const providerOf = m => String(m || '').indexOf(OR_PREFIX) === 0 ? 'openrouter' : (String(m || '').indexOf('groq:') === 0 ? 'groq' : 'ollama');
-
-/* --- OpenRouter 免費模型清單（公開端點，不需 API Key 即可列出） --- */
-function isFreeOpenRouterModel(m) {
-  const p = m.pricing || {};
-  const num = v => (v === undefined || v === null || v === '') ? 0 : Number(v);
-  return (num(p.prompt) === 0 && num(p.completion) === 0) || /:free$/i.test(String(m.id || ''));
-}
-async function fetchOpenRouterFree(force) {
-  if (!force) {
-    const cached = LS.get('kw.orList');
-    if (cached) {
-      try {
-        const c = JSON.parse(cached);
-        if (c && Array.isArray(c.models) && c.models.length && Date.now() - (c.ts || 0) < 6 * 3600 * 1000) return c.models;
-      } catch(e) {}
-    }
-  }
-  try {
-    const r = await fetch('https://openrouter.ai/api/v1/models');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-    const models = (d.data || []).filter(isFreeOpenRouterModel).map(m => {
-      const arch = m.architecture || {};
-      const ins = arch.input_modalities || ['text'];
-      const outs = arch.output_modalities || ['text'];
-      const id = String(m.id || '');
-      // 只留能對話的純文字/圖文模型（排除音樂、語音、embedding、審核類模型）
-      if (outs.indexOf('text') < 0 || ins.indexOf('text') < 0) return null;
-      if (outs.indexOf('audio') >= 0 || outs.indexOf('image') >= 0) return null;
-      if (/(embed|moderation|content-safety|guard|rerank|whisper|-tts)/i.test(id)) return null;
-      return { id: id, name: String(m.name || id), vision: ins.indexOf('image') >= 0, ctx: m.context_length || 0 };
-    }).filter(m => m && m.id).sort((a, b) => (b.vision - a.vision) || a.id.localeCompare(b.id));
-    if (models.length) LS.set('kw.orList', JSON.stringify({ ts: Date.now(), models }));
-    return models;
-  } catch(e) { console.warn('OpenRouter 免費模型清單取得失敗', e); return []; }
-}
-
-let orFreeModels = [];
-let modelSelectsWired = false;
-
-function syncKeyFields() {
-  const pv = providerOf($('modelSel').value), pt = providerOf($('textModelSel').value);
-  $('groqKeyField').style.display = (pv === 'groq' || pt === 'groq') ? 'block' : 'none';
-  $('orKeyField').style.display = (pv === 'openrouter' || pt === 'openrouter') ? 'block' : 'none';
-}
-
-async function fillModelSelects(force) {
-  const got = await Promise.all([listModels(), fetchOpenRouterFree(force)]);
-  const names = got[0]; orFreeModels = got[1];
+async function fillModelSelects() {
+  const names = await listModels();
   const vlm = $('modelSel'), txt = $('textModelSel');
   const savedV = LS.get('kw.vlm') || VLM_DEFAULT, savedT = LS.get('kw.text') || TEXT_DEFAULT;
-
-  const build = (sel, saved, fb, forVision) => {
-    const groups = [];
-    if (names.length) groups.push({ label: '🖥 本地 Ollama', items: names.map(n => ({ v: n, t: n })) });
-    groups.push({ label: '⚡ Groq 雲端', items: GROQ_MODELS.map(n => ({ v: n, t: n.slice(5) })) });
-    const free = orFreeModels.map(m => ({ v: OR_PREFIX + m.id, t: m.id + (forVision ? (m.vision ? ' 👁 可看圖' : ' ⚠ 純文字') : '') + ' (free)' }));
-    if (free.length) groups.push({ label: '🆓 OpenRouter 免費模型', items: free });
-    sel.innerHTML = groups.filter(g => g.items.length).map(g =>
-      '<optgroup label="' + esc(g.label) + '">' + g.items.map(i => '<option value="' + esc(i.v) + '">' + esc(i.t) + '</option>').join('') + '</optgroup>'
-    ).join('');
-    const values = [];
-    for (let i = 0; i < sel.options.length; i++) values.push(sel.options[i].value);
-    if (values.indexOf(saved) >= 0) sel.value = saved;
-    else if (values.indexOf(fb) >= 0) sel.value = fb;
-    else if (saved && providerOf(saved) !== 'ollama' && values.length) {
-      const o = document.createElement('option');
-      o.value = saved; o.textContent = saved + '（上次使用）';
-      sel.appendChild(o); sel.value = saved;
-    }
-    return sel.value;
+  // 本地模型 + Groq 雲端模型
+  const groqModels = [
+    'groq:qwen/qwen3.8-27b',
+    'groq:openai/gpt-oss-120b'
+  ];
+  const build = (sel, saved, fb) => {
+    const all = [...names, ...groqModels];
+    sel.innerHTML = all.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    sel.value = all.includes(saved) ? saved : (all.includes(fb) ? fb : all[0]);
   };
-  build(vlm, savedV, VLM_DEFAULT, true);
-  build(txt, savedT, TEXT_DEFAULT, false);
-
-  $('groqKey').value = LS.get('kw.groqKey') || '';
-  $('orKey').value = LS.get('kw.orKey') || '';
-  if (!modelSelectsWired) {
-    modelSelectsWired = true;
-    vlm.addEventListener('change', () => { LS.set('kw.vlm', vlm.value); syncKeyFields(); });
-    txt.addEventListener('change', () => { LS.set('kw.text', txt.value); syncKeyFields(); });
-    $('groqKey').addEventListener('input', e => LS.set('kw.groqKey', e.target.value.trim()));
-    $('orKey').addEventListener('input', e => LS.set('kw.orKey', e.target.value.trim()));
-  }
-  syncKeyFields();
-  const cnt = $('modelCount');
-  if (cnt) cnt.textContent = '本地 ' + names.length + ' · 免費 ' + orFreeModels.length;
-  return { local: names.length, free: orFreeModels.length };
+  build(vlm, savedV, VLM_DEFAULT); build(txt, savedT, TEXT_DEFAULT);
+  const toggleGroqKey = () => {
+    const show = vlm.value.startsWith('groq:') || txt.value.startsWith('groq:');
+    $('groqKeyField').style.display = show ? 'block' : 'none';
+  };
+  vlm.addEventListener('change', () => { LS.set('kw.vlm', vlm.value); toggleGroqKey(); });
+  txt.addEventListener('change', () => { LS.set('kw.text', txt.value); toggleGroqKey(); });
+  toggleGroqKey();
+  // API key 欄位
+  const savedKey = LS.get('kw.groqKey') || '';
+  $('groqKey').value = savedKey;
+  $('groqKey').addEventListener('input', (e) => LS.set('kw.groqKey', e.target.value));
+  if (!names.length) setStatus('⚠ Ollama 沒回應（可用 Groq 雲端模型）', 'err');
 }
 
-async function refreshModelList(force) {
-  setStatus(force ? '更新模型清單…' : '載入模型清單…');
-  const r = await fillModelSelects(!!force);
-  if (r.free) setStatus('✓ 已載入 ' + r.free + ' 個 OpenRouter 免費模型', 'ok');
-  else if (r.local) setStatus('✓ 已載入 ' + r.local + ' 個本地模型（OpenRouter 清單取得失敗）', 'ok');
-  else setStatus('⚠ 沒有取得模型：請啟動 Ollama 或檢查網路後按「更新模型清單」', 'err');
-}
-
-async function ollamaChat(opts) {
-  const p = providerOf(opts.model);
-  if (p === 'openrouter') return openrouterChat(opts);
-  if (p === 'groq') return groqChat(opts);
-  return localChat(opts);
-}
-
-/* --- OpenRouter（含所有 :free 免費模型） --- */
-async function openrouterChat({ model, prompt, image, json, timeoutMs }) {
-  const apiKey = (LS.get('kw.orKey') || '').trim();
-  if (!apiKey) throw new Error('請先在左側貼上 OpenRouter API Key');
-  const id = String(model).slice(OR_PREFIX.length);
-  const content = image
-    ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + image } }]
-    : prompt;
-  const call = async (useJsonFormat) => {
+async function ollamaChat({ model, prompt, image, json, timeoutMs }) {
+  // Groq 雲端模型
+  if (model.startsWith('groq:')) {
+    const apiKey = LS.get('kw.groqKey') || '';
+    if (!apiKey) throw new Error('請先輸入 Groq API Key');
+    const groqModel = model.slice(5);
     const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), timeoutMs || 120000);
     try {
-      const body = { model: id, messages: [{ role: 'user', content: content }], temperature: 0.2, max_tokens: 2200 };
-      if (useJsonFormat && json) body.response_format = { type: 'json_object' };
-      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const content = image
+        ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + image } }]
+        : prompt;
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey, 'HTTP-Referer': location.origin, 'X-Title': 'SnapLearnEnglish' },
-        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({
+          model: groqModel,
+          messages: [{ role: 'user', content: content }],
+          temperature: 0.1,
+          max_tokens: 1400,
+          response_format: json ? { type: 'json_object' } : undefined
+        }),
         signal: ctl.signal
       });
-      if (!r.ok) { const t = await r.text(); const err = new Error('OpenRouter HTTP ' + r.status + ' ' + t.slice(0, 240)); err.status = r.status; err.body = t; throw err; }
-      return await r.json();
+      if (!r.ok) { const t = await r.text(); throw new Error('Groq HTTP ' + r.status + ' ' + t.slice(0, 200)); }
+      const d = await r.json();
+      return { text: d.choices[0].message.content, raw: d };
     } finally { clearTimeout(timer); }
-  };
-  let d;
-  try { d = await call(true); }
-  catch (e) {
-    if (e.name === 'AbortError') throw new Error('模型逾時（OpenRouter）');
-    if (e.status === 400 && json) d = await call(false);
-    else if (e.name === 'TypeError') throw new Error('無法連線 OpenRouter（網路或 CORS 問題）');
-    else throw e;
   }
-  const ch = (d.choices && d.choices[0]) || {};
-  const msg = ch.message || {};
-  let text = msg.content;
-  if (Array.isArray(text)) text = text.map(x => typeof x === 'string' ? x : ((x && x.text) || '')).join('');
-  return { text: text || ch.text || '', raw: d };
-}
-
-/* --- Groq 雲端 --- */
-async function groqChat({ model, prompt, image, json, timeoutMs }) {
-  const apiKey = (LS.get('kw.groqKey') || '').trim();
-  if (!apiKey) throw new Error('請先輸入 Groq API Key');
-  const groqModel = String(model).slice(5);
-  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), timeoutMs || 120000);
-  try {
-    const content = image
-      ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + image } }]
-      : prompt;
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({
-        model: groqModel,
-        messages: [{ role: 'user', content: content }],
-        temperature: 0.1,
-        max_tokens: 1400,
-        response_format: json ? { type: 'json_object' } : undefined
-      }),
-      signal: ctl.signal
-    });
-    if (!r.ok) { const t = await r.text(); throw new Error('Groq HTTP ' + r.status + ' ' + t.slice(0, 200)); }
-    const d = await r.json();
-    return { text: d.choices[0].message.content, raw: d };
-  } finally { clearTimeout(timer); }
-}
-
-/* --- 本地 Ollama --- */
-async function localChat({ model, prompt, image, json, timeoutMs }) {
+  // 本地 Ollama
   const body = { model, messages: [{ role: 'user', content: prompt, ...(image ? { images: [image] } : {}) }], stream: false, think: false, options: { temperature: 0.1, num_ctx: 8192, num_predict: 1400, top_p: 0.9 } };
   if (json) body.format = 'json';
   const doFetch = async (payload) => {
@@ -779,32 +617,24 @@ const PROMPT_GRAMMAR = `你是英文文法老師。下面是一段看圖描述�
 const PROMPT_GRAMMAR_TAIL = `
 輸出格式：{"structure":[{"title":"結構名稱","phrase":"從原句摘出的連續英文片段","detail":"2-4 句中文說明"}],"highlights":["文法亮點一","文法亮點二"]}`;
 
-const PROMPT_EXAMPLES = (words, sceneDesc, retry) => `你是英文老師。場景（英文描述）：${sceneDesc}
-請為下面 ${words.length} 個英文單字各寫兩個符合這個場景的例句：
+const PROMPT_EXAMPLES = (words, sceneDesc) => `你是英文老師。下面是一張圖片的場景描述，以及圖中出現的 ${words.length} 個英文單字。請為每個單字寫兩個符合這個圖片場景的英文例句：
+- 基礎版：5-8 個字，簡單清楚，適合初學者
+- 進階版：8-12 個字，稍微複雜一點，適合中級
+場景：${sceneDesc}
 單字清單：${words.map(w => w.en + '（' + w.zh + '）').join('、')}
-- basic：5-8 個字的簡單英文句，一定要包含這個單字
-- advanced：8-12 個字的進階英文句，一定要包含這個單字
 
-只輸出 JSON，不要任何說明、不要 Markdown 程式碼區塊：
+只輸出 JSON，不要其他文字：
 {"examples":[{"en":"word","basic":"The cat sits on the mat.","basicIpa":"/ðə kæt sɪts ɑːn ðə mæt/","basicZh":"貓坐在墊子上。","advanced":"The black cat sits quietly on the soft mat.","advancedIpa":"/ðə blæk kæt sɪts ˈkwaɪətli ɑːn ðə sɔːft mæt/","advancedZh":"黑貓安靜地坐在柔軟的墊子上。"}]}
 
 規則：
-1. examples 陣列長度必須剛好是 ${words.length}，en 必須是清單裡的原字（小寫）
-2. basic 一定要包含這個單字；advanced 也一定要包含這個單字
-3. zh 用繁體中文（台灣用語）
-4. 音標若不確定就填空字串 ""，不要亂造
-5. 兩個例句都要符合上面的場景${retry ? '\n6. 上一次的回覆格式不正確。這次務必只輸出上面格式的 JSON 物件。' : ''}`;
-
-const PROMPT_IPA = (words, sentences) => `你是英文發音老師。請提供下列英文的 IPA 音標（美式發音，前後加斜線）。
-單字：${JSON.stringify(words)}
-句子：${JSON.stringify(sentences)}
-只輸出 JSON，不要任何說明：
-{"words":[{"en":"word","ipa":"/wɜːrd/"}],"sentences":[{"en":"The ramp is steep.","ipa":"/ðə ræmp ɪz stiːp/"}]}
-規則：
-1. words 與 sentences 的數量與順序必須和輸入完全一樣（沒有的一段就給空陣列）
-2. en 必須原封不動照抄輸入的文字
-3. IPA 要標重音 ˈ 與次重音 ˌ（若有的話）
-4. 不要翻譯、不要解釋、不要 Markdown`;
+1. 每個單字都要有一筆，en 必須是清單裡的原字
+2. basic 是 5-8 字的簡單英文句子，一定要包含這個單字
+3. basicIpa 是基礎版的 KK 音標，前後加斜線
+4. basicZh 是基礎版的繁體中文翻譯（台灣用語）
+5. advanced 是 8-12 字的進階英文句子，一定要包含這個單字
+6. advancedIpa 是進階版的 KK 音標，前後加斜線
+7. advancedZh 是進階版的繁體中文翻譯
+8. 兩個例句都要符合圖片場景，不要隨便寫`;
 
 /* ============================================================
    8. 主流程
@@ -817,7 +647,7 @@ async function autoLabel() {
   const target = Math.max(1, Math.min(20, parseInt($('targetCount').value, 10) || 10));
   try {
     await img.decode().catch(() => {});
-    const thumb = visionThumb();
+    const thumb = makeThumb(1024);
     setStatus('辨識中…');
     let obj = null, lastErr = '';
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -844,7 +674,7 @@ async function autoLabel() {
     }
     cleaned = cleaned.slice(0, target);
     labels.forEach(l => l.el.remove()); labels = []; selected = null;
-    cleaned.forEach(l => addLabel(l.x, l.y, l.en, l.ipa, l.zh, l.free, { example: l.example, exampleIpa: l.exampleIpa, exampleZh: l.exampleZh }));
+    cleaned.forEach(l => addLabel(l.x, l.y, l.en, l.ipa, l.zh, l.free));
     sentence = normalizeSentenceObj(obj.sentence) || fallbackSentence(cleaned);
     grammar = null; renderEditor(); renderSentence(); renderGrammar();
     setStatus(`✓ ${cleaned.length} 個標籤，生成例句中…`, 'ok');
@@ -854,10 +684,9 @@ async function autoLabel() {
 
     await composeSentence(); buildGrammar();
     renderCards();
-    setStatus(`✓ 完成：${labels.length} 個單字，例句與文法已生成`, 'ok');
   } catch (e) {
     setStatus('✗ ' + e.message, 'err');
-    alert('自動辨識失敗：' + e.message + '\n\n請確認所選模型可用：\n• 本地 Ollama 需在 127.0.0.1:11434 運作\n• Groq / OpenRouter 需先在左側填入 API Key');
+    alert('自動辨識失敗：' + e.message + '\n\n請確認 Ollama 服務在 127.0.0.1:11434 運作中。');
   } finally { busy = false; btn.disabled = false; btn.textContent = '🤖 自動辨識'; }
 }
 
@@ -913,121 +742,61 @@ async function buildGrammar() {
   } catch(e) {}
 }
 
-/* 例句：用文字模型分批生成，任何失敗都保證有 basic + advanced 可顯示 */
-function matchLabelByWord(en) {
-  const key = String(en || '').toLowerCase().trim().replace(/^(a|an|the)\s+/, '').replace(/[^a-z' -]/g, '').replace(/\s+/g, ' ').trim();
-  if (!key) return null;
-  let hit = labels.find(l => String(l.en || '').toLowerCase().trim() === key);
-  if (hit) return hit;
-  hit = labels.find(l => baseForm(String(l.en || '').toLowerCase()) === baseForm(key));
-  return hit || null;
-}
-
-function applyExample(e) {
-  const lab = matchLabelByWord(e && e.en);
-  if (!lab) return false;
-  const basic = String(e.basic || e.example || e.simple || '').trim();
-  const adv = String(e.advanced || e.advanced_en || e.hard || '').trim();
-  if (basic) {
-    lab.example = basic;
-    lab.exampleIpa = normalizeIPA(e.basicIpa || e.exampleIpa || e.simpleIpa || '');
-    lab.exampleZh = toTrad(String(e.basicZh || e.exampleZh || e.simpleZh || '').trim());
-  }
-  if (adv) {
-    lab.advanced = adv;
-    lab.advancedIpa = normalizeIPA(e.advancedIpa || '');
-    lab.advancedZh = toTrad(String(e.advancedZh || '').trim());
-  }
-  return !!(basic || adv);
-}
-
-function fillMissingExamples() {
-  labels.forEach(l => {
-    const zh = l.zh || l.en;
-    if (!l.example) {
-      l.example = `I can see the ${l.en} in the picture.`;
-      l.exampleZh = `我在圖中看到${zh}。`;
-    }
-    if (!l.advanced) {
-      l.advanced = `In this photo, you can clearly see the ${l.en} near the center.`;
-      l.advancedZh = `在這張照片中，你可以清楚看到位於中央附近的${zh}。`;
-    }
-  });
-}
-
-const ipaKey = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
-
-async function ensureIPA() {
-  if (!labels.length) return;
-  const model = $('textModelSel').value || TEXT_DEFAULT;
-  const wordNeed = [...new Set(labels.filter(l => !l.ipa).map(l => l.en))];
-  const sentNeed = [];
-  const seen = new Set();
-  const addSent = s => { const k = ipaKey(s); if (!k || seen.has(k)) return; seen.add(k); sentNeed.push(String(s).trim()); };
-  labels.forEach(l => { if (l.example && !l.exampleIpa) addSent(l.example); if (l.advanced && !l.advancedIpa) addSent(l.advanced); });
-  if (!wordNeed.length && !sentNeed.length) return;
-
-  const chunk = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };
-  try {
-    for (const part of chunk(wordNeed, 12)) {
-      setStatus('補上單字音標中…');
-      const { text } = await ollamaChat({ model, prompt: PROMPT_IPA(part, []), json: true, timeoutMs: 60000 });
-      const o = extractJSON(text) || {};
-      (o.words || []).forEach(x => {
-        const k = String((x && x.en) || '').toLowerCase().trim();
-        const ipa = normalizeIPA(x && x.ipa);
-        if (!k || !ipa) return;
-        labels.forEach(l => { if (String(l.en).toLowerCase() === k && !l.ipa) l.ipa = ipa; });
-      });
-    }
-    for (const part of chunk(sentNeed, 8)) {
-      setStatus('補上句子音標中…');
-      const { text } = await ollamaChat({ model, prompt: PROMPT_IPA([], part), json: true, timeoutMs: 60000 });
-      const o = extractJSON(text) || {};
-      const arr = Array.isArray(o.sentences) ? o.sentences : [];
-      part.forEach((s, i) => {
-        const hit = arr.find(x => x && ipaKey(x.en) === ipaKey(s)) || arr[i];
-        const ipa = normalizeIPA(hit && hit.ipa);
-        if (!ipa) return;
-        labels.forEach(l => {
-          if (l.example && ipaKey(l.example) === ipaKey(s) && !l.exampleIpa) l.exampleIpa = ipa;
-          if (l.advanced && ipaKey(l.advanced) === ipaKey(s) && !l.advancedIpa) l.advancedIpa = ipa;
-        });
-      });
-    }
-  } catch (e) { console.warn('ensureIPA 失敗', e); }
-  renderCards();
-  renderSentence();
-}
-
 async function generateExamples(words) {
-  const src = Array.isArray(words) && words.length ? words : labels;
   const model = $('textModelSel').value || TEXT_DEFAULT;
-  const sceneDesc = (sentence && sentence.en) ? sentence.en : 'A scene from the photo';
-  const list = src.map(w => ({ en: String(w.en || '').toLowerCase().trim(), zh: w.zh || '' })).filter(w => w.en);
-  if (!list.length) return;
-
-  let got = 0;
-  const BATCH = 5;
-  for (let i = 0; i < list.length; i += BATCH) {
-    const batch = list.slice(i, i + BATCH);
-    setStatus(`生成單字例句中… ${Math.min(i + BATCH, list.length)}/${list.length}`);
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const { text } = await ollamaChat({ model, prompt: PROMPT_EXAMPLES(batch, sceneDesc, attempt === 2), json: true, timeoutMs: 90000 });
-        const o = extractJSON(text);
-        const arr = Array.isArray(o && o.examples) ? o.examples : (Array.isArray(o && o.items) ? o.items : (Array.isArray(o) ? o : []));
-        if (!arr.length) continue;
-        arr.forEach(e => { if (applyExample(e)) got++; });
-        break;
-      } catch (e) { console.warn('generateExamples 失敗（第 ' + attempt + ' 次）', e); }
-    }
+  const sceneDesc = sentence ? sentence.en : 'A scene from the photo';
+  try {
+    setStatus('生成單字例句中…');
+    const { text } = await ollamaChat({
+      model,
+      prompt: PROMPT_EXAMPLES(words, sceneDesc),
+      json: true, timeoutMs: 90000
+    });
+    const o = extractJSON(text);
+    if (!o || !o.examples) return;
+    // 建立映射：en → example
+    const map = {};
+    o.examples.forEach(e => {
+      const en = String(e.en || '').toLowerCase().trim();
+      if (en) map[en] = {
+        basic: String(e.basic || e.example || '').trim(),
+        basicIpa: normalizeIPA(e.basicIpa || e.exampleIpa || ''),
+        basicZh: toTrad(String(e.basicZh || e.exampleZh || '').trim()),
+        advanced: String(e.advanced || '').trim(),
+        advancedIpa: normalizeIPA(e.advancedIpa || ''),
+        advancedZh: toTrad(String(e.advancedZh || '').trim())
+      };
+    });
+    // 更新到 labels
+    labels.forEach(l => {
+      const hit = map[l.en.toLowerCase()];
+      if (hit && hit.basic) {
+        l.example = hit.basic;
+        l.exampleIpa = hit.basicIpa;
+        l.exampleZh = hit.basicZh;
+        l.advanced = hit.advanced;
+        l.advancedIpa = hit.advancedIpa;
+        l.advancedZh = hit.advancedZh;
+      }
+    });
+    // 如果還有缺的，用 fallback 補
+    labels.forEach(l => {
+      if (!l.example) {
+        l.example = `The ${l.en} is in the picture.`;
+        l.exampleZh = `這張圖中有${l.zh}。`;
+      }
+    });
+    renderCards();
+  } catch(e) {
+    console.warn('generateExamples failed', e);
+    // 失敗就用 fallback
+    labels.forEach(l => {
+      if (!l.example) {
+        l.example = `The ${l.en} is in the picture.`;
+        l.exampleZh = `這張圖中有${l.zh}。`;
+      }
+    });
   }
-  fillMissingExamples();
-  await ensureIPA();
-  renderCards();
-  if (currentTab === 'flashcards') updateFlashcard();
-  setStatus(got ? `✓ 例句完成（模型 ${got}/${list.length}）` : '⚠ 模型沒給例句，已用預設句型', got ? 'ok' : 'err');
 }
 
 async function reidentifySelected() {
@@ -1048,7 +817,7 @@ async function verifyLabels() {
   const model = $('modelSel').value || VLM_DEFAULT;
   try {
     const words = labels.map(l => l.en);
-    const { text } = await ollamaChat({ model, prompt: PROMPT_VERIFY(words), image: visionThumb(), json: true, timeoutMs: 90000 });
+    const { text } = await ollamaChat({ model, prompt: PROMPT_VERIFY(words), image: makeThumb(1024), json: true, timeoutMs: 90000 });
     const o = extractJSON(text) || {};
     const missSet = new Set();
     (o.check || []).forEach(e => { if (!e.seen) missSet.add(String(e.en||'').toLowerCase()); });
@@ -1122,7 +891,7 @@ function renderCards() {
 function flipCard() { $('flipCard').classList.toggle('flipped'); }
 function updateFlashcard() {
   const card = $('flipCard'); card.classList.remove('flipped');
-  if (!labels.length) { $('fcWord').textContent = '無單字'; $('fcIpa').textContent = ''; $('fcZh').textContent = '請先辨識'; $('fcCounter').textContent = '0 / 0'; ['fcExampleEn','fcExampleIpa','fcExampleZh','fcAdvancedEn','fcAdvancedIpa','fcAdvancedZh'].forEach(id => { $(id).textContent = ''; }); return; }
+  if (!labels.length) { $('fcWord').textContent = '無單字'; $('fcIpa').textContent = ''; $('fcZh').textContent = '請先辨識'; $('fcCounter').textContent = '0 / 0'; $('fcExampleEn').textContent = ''; $('fcExampleZh').textContent = ''; $('fcAdvancedEn').textContent = ''; $('fcAdvancedZh').textContent = ''; return; }
   if (fcIndex >= labels.length) fcIndex = 0;
   const l = labels[fcIndex];
   setTimeout(() => {
@@ -1130,10 +899,8 @@ function updateFlashcard() {
     $('fcIpa').textContent = l.ipa || '';
     $('fcZh').textContent = l.zh || '';
     $('fcExampleEn').textContent = l.example || '';
-    $('fcExampleIpa').textContent = l.exampleIpa || '';
     $('fcExampleZh').textContent = l.exampleZh || '';
     $('fcAdvancedEn').textContent = l.advanced || '';
-    $('fcAdvancedIpa').textContent = l.advancedIpa || '';
     $('fcAdvancedZh').textContent = l.advancedZh || '';
     $('fcCounter').textContent = (fcIndex+1) + ' / ' + labels.length;
   }, 150);
@@ -1155,16 +922,6 @@ function startQuiz() {
   renderQuizQuestion();
 }
 
-function quizExplain(lab) {
-  let h = `<b>${esc(lab.en)}</b> <span style="color:#9ca3af;font-family:monospace">${esc(lab.ipa || '')}</span> = ${esc(lab.zh)}`;
-  if (lab.example) {
-    h += `<div style="margin-top:6px;color:#93c5fd">${esc(lab.example)}</div>`;
-    if (lab.exampleIpa) h += `<div style="color:#9ca3af;font-size:12px;font-family:monospace">${esc(lab.exampleIpa)}</div>`;
-    if (lab.exampleZh) h += `<div style="color:#fbbf24;font-size:12px">${esc(lab.exampleZh)}</div>`;
-  }
-  return h;
-}
-
 function buildQuizQuestions() {
   const qs = [];
   const pool = [...labels];
@@ -1173,14 +930,14 @@ function buildQuizQuestions() {
     const correct = pool[i];
     const others = pool.filter(l => l !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
     const opts = [correct.zh, ...others.map(l => l.zh)].sort(() => Math.random() - 0.5);
-    qs.push({ q: `「${correct.en}」${correct.ipa ? ' ' + correct.ipa : ''} 的中文意思是？`, options: opts, answer: opts.indexOf(correct.zh), explain: quizExplain(correct) });
+    qs.push({ q: `「${correct.en}」的中文意思是？`, options: opts, answer: opts.indexOf(correct.zh), explain: `${correct.en} ${correct.ipa} = ${correct.zh}` });
   }
   // 題型2: 中文選英文
   for (let i = 3; i < Math.min(5, pool.length); i++) {
     const correct = pool[i];
     const others = pool.filter(l => l !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
     const opts = [correct.en, ...others.map(l => l.en)].sort(() => Math.random() - 0.5);
-    qs.push({ q: `「${correct.zh}」的英文是？`, options: opts, answer: opts.indexOf(correct.en), explain: quizExplain(correct) });
+    qs.push({ q: `「${correct.zh}」的英文是？`, options: opts, answer: opts.indexOf(correct.en), explain: `${correct.zh} = ${correct.en} ${correct.ipa}` });
   }
   return qs.sort(() => Math.random() - 0.5);
 }
@@ -1304,9 +1061,18 @@ function exportPNG() {
 /* ============================================================
    15. 啟動
    ============================================================ */
-refreshModelList(false);
+fillModelSelects();
 (function initTarget() { const el = $('targetCount'); const v = LS.get('kw.target'); if (v) el.value = v; el.addEventListener('change', () => { el.value = Math.max(1, Math.min(20, parseInt(el.value,10)||10)); LS.set('kw.target', el.value); }); })();
 setStatus('待命');
+
+// PWA Service Worker 註冊
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log('SW registered'))
+      .catch((e) => console.log('SW failed', e));
+  });
+}
 </script>
 </body>
 </html>

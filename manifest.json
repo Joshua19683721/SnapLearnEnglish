@@ -1,0 +1,28 @@
+{
+  "name": "SnapLearn English - 看圖識詞",
+  "short_name": "SnapLearn",
+  "description": "用照片 AI 學英文！上傳圖片，AI 自動標出單字、例句、音標和文法拆解。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1e2128",
+  "theme_color": "#3b82f6",
+  "lang": "zh-Hant",
+  "dir": "ltr",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
