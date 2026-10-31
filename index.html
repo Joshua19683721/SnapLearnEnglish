@@ -132,15 +132,16 @@
 
   /* === Mobile Responsive === */
   @media (max-width: 768px) {
-    header { padding: 8px 12px; }
-    header h1 { font-size: 15px; }
-    .btn { padding: 8px 12px; font-size: 14px; min-height: 40px; }
+    header { padding: 6px 10px; gap: 6px; }
+    header h1 { font-size: 14px; margin: 0; }
+    .btn { padding: 7px 10px; font-size: 13px; min-height: 36px; }
+    header .btn { font-size: 12px; padding: 6px 8px; }
     .tab-bar { padding: 0 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .tab-btn { padding: 12px 14px; font-size: 15px; white-space: nowrap; }
+    .tab-btn { padding: 10px 12px; font-size: 14px; white-space: nowrap; }
     .main { flex-direction: column; }
     #view-visual { flex-direction: column; }
-    .stage-wrap { padding: 10px; }
-    .panel { width: 100%; border-left: none; border-top: 1px solid #3a3f4b; max-height: 50vh; }
+    .stage-wrap { padding: 8px; }
+    .panel { width: 100%; border-left: none; border-top: 1px solid #3a3f4b; max-height: 45vh; }
     .cards-grid { grid-template-columns: 1fr !important; gap: 10px; }
     .vcard { padding: 14px; }
     .v-en { font-size: 20px !important; }
@@ -149,12 +150,12 @@
     .flip-stage { width: 100%; max-width: 320px; height: 380px; }
     .f-en { font-size: 32px !important; }
     .quiz-option { padding: 14px; font-size: 15px; min-height: 48px; }
-    #status { font-size: 11px; width: 100%; margin: 4px 0 0 0; }
+    #status { font-size: 11px; width: 100%; margin: 2px 0 0 0; }
     .field { margin-bottom: 12px; }
     .field label { font-size: 13px; }
     .field input, .field select { padding: 10px; font-size: 15px; }
-    .label .en { font-size: 14px; }
-    .label .zh { font-size: 11px; }
+    .label .en { font-size: 13px; }
+    .label .zh { font-size: 10px; }
   }
 
   /* Touch improvements */
@@ -399,15 +400,28 @@ function handleFile(e) {
   const f = e.target.files[0]; if (!f) return;
   const reader = new FileReader();
   reader.onload = ev => {
-    img.onload = () => {
-      labels.forEach(l => l.el.remove()); labels = []; selected = null; sentence = null; grammar = null;
-      renderEditor(); renderSentence(); renderGrammar();
-      setStatus(`已載入 ${img.naturalWidth}×${img.naturalHeight}`, 'ok');
+    const tmpImg = new Image();
+    tmpImg.onload = () => {
+      // 壓縮到 720p（最長邊 1280px）
+      const MAX_W = 1280, MAX_H = 1280;
+      let w = tmpImg.width, h = tmpImg.height;
+      if (w > h && w > MAX_W) { h = h * MAX_W / w; w = MAX_W; }
+      else if (h > MAX_H) { w = w * MAX_H / h; h = MAX_H; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(tmpImg, 0, 0, w, h);
+      img.onload = () => {
+        labels.forEach(l => l.el.remove()); labels = []; selected = null; sentence = null; grammar = null;
+        renderEditor(); renderSentence(); renderGrammar();
+        setStatus(`已載入 ${w}×${h} (720p)`, 'ok');
+      };
+      img.src = canvas.toDataURL('image/jpeg', 0.85);
     };
-    img.src = ev.target.result;
+    tmpImg.src = ev.target.result;
   };
   reader.readAsDataURL(f);
-  e.target.value = ''; // 重置，讓同一個檔案可以再選
+  e.target.value = '';
 }
 
 img.addEventListener('dblclick', e => {
