@@ -240,7 +240,8 @@
       <div class="hint">
         操作：雙擊圖面加標籤；拖曳移動；Delete 刪除選取。<br>
         虛線框 = 模型沒給座標，請自己拖到正確位置。<br>
-        點擊單字或句子可發音（en-US）。
+        點擊單字或句子可發音（en-US）。<br>
+        📷 拍照會先縮成 720p（短邊 720，如 1280×720）再送視覺模型。
       </div>
     </div>
   </div>
@@ -382,6 +383,10 @@ let quizQuestions = [];
 const VLM_DEFAULT = 'qwen3.5:4b';
 const TEXT_DEFAULT = 'qwen2.5:7b';
 const OLLAMA = 'http://127.0.0.1:11434';
+// 相機拍的照片先縮成 720p（短邊 720，例如 1280×720 / 960×720）再送視覺模型
+const CAMERA_SHORT_SIDE = 720;
+let imgFromCamera = false;
+let imgBase64 = '';
 
 function setStatus(msg, kind) { const el = $('status'); el.textContent = msg || '待命'; el.className = kind || ''; }
 
@@ -406,18 +411,47 @@ fileInput.addEventListener('change', handleFile);
 $('camera').addEventListener('change', handleFile);
 function handleFile(e) {
   const f = e.target.files[0]; if (!f) return;
+  const fromCamera = e.target.id === 'camera';
   const reader = new FileReader();
-  reader.onload = ev => {
-    img.onload = () => {
-      labels.forEach(l => l.el.remove()); labels = []; selected = null; sentence = null; grammar = null;
-      renderEditor(); renderSentence(); renderGrammar();
-      setStatus(`已載入 ${img.naturalWidth}×${img.naturalHeight}`, 'ok');
-    };
-    img.src = ev.target.result;
-  };
+  reader.onload = ev => loadImageSource(ev.target.result, fromCamera);
   reader.readAsDataURL(f);
   e.target.value = ''; // 重置，讓同一個檔案可以再選
 }
+
+/* 相機照片先轉 720p（長邊 1280，維持比例）再放進畫面與送去辨識 */
+function loadImageSource(src, fromCamera) {
+  imgFromCamera = !!fromCamera;
+  const probe = new Image();
+  probe.onload = () => {
+    const W = probe.naturalWidth, H = probe.naturalHeight;
+    let finalSrc = src, scaled = false;
+    if (fromCamera && Math.min(W, H) > CAMERA_SHORT_SIDE) {
+      const s = CAMERA_SHORT_SIDE / Math.min(W, H);
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(W * s));
+      c.height = Math.max(1, Math.round(H * s));
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(probe, 0, 0, c.width, c.height);
+      finalSrc = c.toDataURL('image/jpeg', 0.85);
+      scaled = true;
+    }
+    img.onload = () => {
+      labels.forEach(l => l.el.remove()); labels = []; selected = null; sentence = null; grammar = null;
+      renderEditor(); renderSentence(); renderGrammar();
+      const dims = `${img.naturalWidth}×${img.naturalHeight}`;
+      setStatus(scaled ? `已載入 ${dims}（相機照片已轉 720p）` : `已載入 ${dims}`, 'ok');
+    };
+    imgBase64 = scaled ? finalSrc.split(',')[1] : '';
+    img.src = finalSrc;
+  };
+  probe.onerror = () => { imgBase64 = ''; img.onload = () => setStatus(`已載入 ${img.naturalWidth}×${img.naturalHeight}`, 'ok'); img.src = src; };
+  probe.src = src;
+}
+
+/* 送給視覺模型的圖：相機照片直接送 720p 那張（不再二次壓縮），其餘最多 1024 */
+function visionThumb() { return (imgFromCamera && imgBase64) ? imgBase64 : makeThumb(1024); }
 
 img.addEventListener('dblclick', e => {
   if (!img.src) { alert('請先選擇圖片'); return; }
@@ -783,7 +817,7 @@ async function autoLabel() {
   const target = Math.max(1, Math.min(20, parseInt($('targetCount').value, 10) || 10));
   try {
     await img.decode().catch(() => {});
-    const thumb = makeThumb(1024);
+    const thumb = visionThumb();
     setStatus('辨識中…');
     let obj = null, lastErr = '';
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -1014,7 +1048,7 @@ async function verifyLabels() {
   const model = $('modelSel').value || VLM_DEFAULT;
   try {
     const words = labels.map(l => l.en);
-    const { text } = await ollamaChat({ model, prompt: PROMPT_VERIFY(words), image: makeThumb(1024), json: true, timeoutMs: 90000 });
+    const { text } = await ollamaChat({ model, prompt: PROMPT_VERIFY(words), image: visionThumb(), json: true, timeoutMs: 90000 });
     const o = extractJSON(text) || {};
     const missSet = new Set();
     (o.check || []).forEach(e => { if (!e.seen) missSet.add(String(e.en||'').toLowerCase()); });
