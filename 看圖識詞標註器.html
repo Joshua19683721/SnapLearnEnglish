@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>看圖識詞 · 互動學習教室</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; background: #1e2128; color: #e8e8e8; display: flex; flex-direction: column; height: 100vh; }
+
+  /* Header */
+  header { padding: 10px 18px; background: #2a2e37; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid #3a3f4b; }
+  header h1 { font-size: 17px; font-weight: 700; margin-right: 6px; white-space: nowrap; }
+  .btn { background: #3b82f6; color: #fff; border: none; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
+  .btn:hover { background: #2563eb; }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.gray { background: #4b5563; }
+  .btn.gray:hover { background: #374151; }
+  .btn.danger { background: #dc2626; }
+  .btn.sm { padding: 4px 8px; font-size: 12px; }
+  #status { font-size: 12px; color: #9ca3af; margin-left: auto; }
+  #status.err { color: #f87171; }
+  #status.ok { color: #34d399; }
+
+  /* Tab Navigation */
+  .tab-bar { display: flex; background: #2a2e37; padding: 0 18px; gap: 4px; border-bottom: 1px solid #3a3f4b; }
+  .tab-btn { background: transparent; color: #9ca3af; border: none; padding: 10px 18px; cursor: pointer; font-size: 14px; font-family: inherit; border-bottom: 3px solid transparent; transition: all .2s; }
+  .tab-btn:hover { color: #e8e8e8; }
+  .tab-btn.active { color: #3b82f6; border-bottom-color: #3b82f6; font-weight: 700; }
+
+  /* Main Area */
+  .main { flex: 1; display: flex; overflow: hidden; }
+  .view { display: none; flex: 1; overflow: auto; }
+  .view.active { display: flex; }
+
+  /* === View 1: Visual Map (標註) === */
+  #view-visual { flex-direction: row; }
+  .stage-wrap { flex: 1; overflow: auto; padding: 20px; display: flex; align-items: flex-start; justify-content: center; }
+  #stage { position: relative; display: inline-block; }
+  #stage img { display: block; max-width: 100%; height: auto; user-select: none; }
+  .label { position: absolute; transform: translate(-50%, -50%); padding: 0; cursor: move; text-align: center; line-height: 1.25; user-select: none; white-space: nowrap; }
+  .label .en { font-weight: 800; color: #ff2d2d; font-size: 15px; text-shadow: 0 0 4px #000, 0 0 2px #000, 1px 1px 3px #000; }
+  .label .en .ipa { font-weight: 400; font-size: 0.78em; color: #ffb3b3; margin-left: 4px; }
+  .label .zh { font-size: 0.72em; color: #fff; text-shadow: 0 0 3px #000, 1px 1px 2px #000; }
+  .label.sel { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  .label.free { outline: 2px dashed #f59e0b; outline-offset: 3px; }
+  .label.sus { outline: 2px dashed #ef4444; outline-offset: 3px; }
+
+  .panel { width: 320px; background: #2a2e37; padding: 16px; overflow-y: auto; border-left: 1px solid #3a3f4b; flex-shrink: 0; }
+  .panel h2 { font-size: 14px; margin-bottom: 10px; color: #9ca3af; margin-top: 16px; }
+  .panel h2:first-child { margin-top: 0; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
+  .field input, .field select { width: 100%; padding: 7px; border-radius: 5px; border: 1px solid #4b5563; background: #1e2128; color: #fff; font-size: 13px; font-family: inherit; }
+  .field input:focus, .field select:focus { outline: none; border-color: #3b82f6; }
+  .hint { font-size: 12px; color: #9ca3af; line-height: 1.6; margin-top: 10px; }
+  .empty { color: #6b7280; font-size: 13px; padding: 20px; text-align: center; }
+  label.slider { display: flex; align-items: center; gap: 8px; }
+  input[type=range] { flex: 1; }
+  .sentence-box { background: #1e2128; border: 1px solid #4b5563; border-radius: 6px; padding: 10px; font-size: 12px; line-height: 1.7; }
+  .sentence-box .en { color: #fbbf24; font-weight: 700; cursor: pointer; }
+  .sentence-box .ipa { color: #9ca3af; }
+  .sentence-box .sent-line { margin-bottom: 4px; }
+  .gphrase { position: relative; border-bottom: 1px dashed #fbbf24; cursor: help; padding: 0 1px; }
+  .gphrase .tooltip { display: none; position: absolute; bottom: 130%; left: 0; background: #111827; color: #e5e7eb; border: 1px solid #fbbf24; border-radius: 8px; padding: 10px 12px; width: 300px; font-size: 12px; line-height: 1.6; z-index: 99; box-shadow: 0 6px 18px rgba(0,0,0,.6); font-weight: 400; white-space: normal; }
+  .gphrase .tooltip .tt-title { color: #fbbf24; font-weight: 700; display: block; margin-bottom: 4px; }
+  .gphrase:hover .tooltip { display: block; }
+  .row { display: flex; gap: 6px; }
+  .row > * { flex: 1; }
+
+  /* === View 2: Vocab Cards === */
+  #view-cards { flex-direction: column; padding: 24px; overflow-y: auto; }
+  #view-cards h2 { font-size: 20px; margin-bottom: 4px; }
+  #view-cards .sub { color: #9ca3af; font-size: 13px; margin-bottom: 20px; }
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .vcard { background: #2a2e37; border: 1px solid #3a3f4b; border-radius: 12px; padding: 16px; transition: all .2s; }
+  .vcard:hover { border-color: #3b82f6; transform: translateY(-2px); }
+  .vcard .v-head { display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; }
+  .vcard .v-en { font-size: 20px; font-weight: 800; color: #fff; }
+  .vcard .v-ipa { font-size: 13px; color: #9ca3af; font-family: monospace; margin-left: 6px; }
+  .vcard .v-zh { font-size: 14px; color: #fbbf24; margin-bottom: 8px; }
+  .vcard .v-cat { font-size: 11px; background: #3b82f633; color: #93c5fd; padding: 2px 8px; border-radius: 10px; }
+  .vcard .speak-btn { background: #3b82f6; color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px; flex-shrink: 0; }
+  .vcard .speak-btn:hover { background: #2563eb; }
+
+  /* === View 3: Flashcards === */
+  #view-flashcards { flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+  .flip-card { perspective: 1000px; width: 380px; height: 260px; cursor: pointer; }
+  .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform .6s; transform-style: preserve-3d; }
+  .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+  .flip-front, .flip-back { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+  .flip-front { background: #2a2e37; border: 2px solid #3b82f6; }
+  .flip-back { background: #1e3a5f; border: 2px solid #fbbf24; transform: rotateY(180deg); }
+  .flip-front .f-en { font-size: 36px; font-weight: 900; color: #fff; margin-bottom: 12px; }
+  .flip-front .f-hint { font-size: 12px; color: #9ca3af; margin-top: 16px; }
+  .flip-back .f-ipa { font-size: 16px; color: #93c5fd; font-family: monospace; margin-bottom: 10px; }
+  .flip-back .f-zh { font-size: 28px; font-weight: 700; color: #fbbf24; }
+  .flash-controls { display: flex; gap: 12px; margin-top: 24px; align-items: center; }
+  .flash-counter { font-size: 14px; color: #9ca3af; min-width: 60px; text-align: center; }
+
+  /* === View 4: Quiz === */
+  #view-quiz { flex-direction: column; align-items: center; padding: 24px; overflow-y: auto; }
+  .quiz-box { background: #2a2e37; border: 1px solid #3a3f4b; border-radius: 16px; padding: 28px; width: 100%; max-width: 560px; }
+  .quiz-progress-bar { width: 100%; height: 6px; background: #1e2128; border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
+  .quiz-progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #93c5fd); transition: width .3s; border-radius: 3px; }
+  .quiz-meta { display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 12px; color: #9ca3af; }
+  .quiz-question { font-size: 18px; font-weight: 700; margin-bottom: 20px; line-height: 1.5; }
+  .quiz-option { width: 100%; text-align: left; padding: 12px 16px; margin-bottom: 8px; background: #1e2128; border: 1px solid #4b5563; border-radius: 8px; color: #e8e8e8; cursor: pointer; font-size: 14px; font-family: inherit; transition: all .2s; }
+  .quiz-option:hover { border-color: #3b82f6; background: #3b82f615; }
+  .quiz-option.correct { background: #065f46; border-color: #34d399; color: #a7f3d0; }
+  .quiz-option.wrong { background: #7f1d1d; border-color: #ef4444; color: #fecaca; }
+  .quiz-option:disabled { cursor: not-allowed; }
+  .quiz-feedback { margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px; line-height: 1.6; display: none; }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.good { background: #065f4633; color: #6ee7b7; border: 1px solid #065f46; }
+  .quiz-feedback.bad { background: #7f1d1d33; color: #fca5a5; border: 1px solid #7f1d1d; }
+  .quiz-next-btn { width: 100%; margin-top: 16px; padding: 12px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; display: none; }
+  .quiz-next-btn.show { display: block; }
+  .quiz-result { text-align: center; padding: 20px 0; }
+  .quiz-result .trophy { font-size: 48px; margin-bottom: 12px; }
+  .quiz-result h3 { font-size: 22px; margin-bottom: 8px; }
+  .quiz-result p { color: #9ca3af; font-size: 14px; margin-bottom: 16px; }
+
+  /* Grammar highlight in sentence */
+  .grammar-box { margin-top: 12px; }
+  .grammar-item { background: #1e2128; border: 1px solid #4b5563; border-radius: 6px; padding: 10px; margin-bottom: 8px; font-size: 13px; line-height: 1.7; }
+  .grammar-item .g-title { color: #fbbf24; font-weight: 700; margin-bottom: 4px; }
+  .grammar-item .g-phrase { color: #93c5fd; font-size: 12px; margin-bottom: 4px; }
+
+  /* === Mobile Responsive === */
+  @media (max-width: 768px) {
+    header { padding: 8px 12px; }
+    header h1 { font-size: 15px; }
+    .btn { padding: 8px 12px; font-size: 14px; min-height: 40px; }
+    .tab-bar { padding: 0 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .tab-btn { padding: 12px 14px; font-size: 15px; white-space: nowrap; }
+    .main { flex-direction: column; }
+    #view-visual { flex-direction: column; }
+    .stage-wrap { padding: 10px; }
+    .panel { width: 100%; border-left: none; border-top: 1px solid #3a3f4b; max-height: 50vh; }
+    .cards-grid { grid-template-columns: 1fr !important; gap: 10px; }
+    .vcard { padding: 14px; }
+    .v-en { font-size: 20px !important; }
+    .v-ipa { font-size: 13px; }
+    .v-zh { font-size: 15px; }
+    .flip-stage { width: 100%; max-width: 320px; height: 380px; }
+    .f-en { font-size: 32px !important; }
+    .quiz-option { padding: 14px; font-size: 15px; min-height: 48px; }
+    #status { font-size: 11px; width: 100%; margin: 4px 0 0 0; }
+    .field { margin-bottom: 12px; }
+    .field label { font-size: 13px; }
+    .field input, .field select { padding: 10px; font-size: 15px; }
+    .label .en { font-size: 14px; }
+    .label .zh { font-size: 11px; }
+  }
+
+  /* Touch improvements */
+  @media (hover: none) {
+    .vcard, .quiz-option, .tab-btn { cursor: pointer; }
+    .label { cursor: grab; }
+    .label:active { cursor: grabbing; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📚 看圖識詞教室</h1>
+  <input type="file" id="file" accept="image/*" hidden>
+  <input type="file" id="camera" accept="image/*" capture="environment" hidden>
+  <button class="btn" onclick="document.getElementById('file').click()">📂 選擇圖片</button>
+  <button class="btn" onclick="document.getElementById('camera').click()">📷 拍照</button>
+  <button class="btn" id="autoBtn" onclick="autoLabel()">🤖 自動辨識</button>
+  <button class="btn gray" id="verifyBtn" onclick="verifyLabels()">🔍 驗證</button>
+  <button class="btn gray" onclick="exportPNG()">⬇️ 匯出 PNG</button>
+  <button class="btn gray" onclick="clearAll()">清空</button>
+  <span id="status">待命</span>
+</header>
+
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="visual" onclick="switchTab('visual')">🗺️ 實景熱點</button>
+  <button class="tab-btn" data-tab="cards" onclick="switchTab('cards')">📇 單字圖卡</button>
+  <button class="tab-btn" data-tab="flashcards" onclick="switchTab('flashcards')">🎴 翻卡複習</button>
+  <button class="tab-btn" data-tab="quiz" onclick="switchTab('quiz')">✏️ 隨堂小測</button>
+</nav>
+
+<div class="main">
+
+  <!-- ============ View 1: Visual Map ============ -->
+  <div id="view-visual" class="view active">
+    <div class="stage-wrap">
+      <div id="stage"><img id="img" alt=""></div>
+    </div>
+    <div class="panel">
+      <h2>辨識設定</h2>
+      <div class="field">
+        <label>視覺模型（看圖用）</label>
+        <select id="modelSel"></select>
+      </div>
+      <div class="field">
+        <label>文字模型（寫文法用）</label>
+        <select id="textModelSel"></select>
+      </div>
+      <div class="field" id="groqKeyField" style="display:none">
+        <label>Groq API Key（雲端模型用）</label>
+        <input type="password" id="groqKey" placeholder="gsk_...">
+      </div>
+      <div class="field">
+        <label>標註數量</label>
+        <input type="number" id="targetCount" min="1" max="20" step="1" value="10">
+      </div>
+
+      <h2>標籤編輯</h2>
+      <div id="editor">
+        <div class="empty">點一下圖上的標籤來編輯</div>
+      </div>
+
+      <h2>圖片句子</h2>
+      <div id="sentenceBox" class="sentence-box">
+        <div class="empty">自動辨識後自動產生</div>
+      </div>
+      <div id="grammarBox" class="grammar-box"></div>
+
+      <div class="field" style="margin-top:14px">
+        <label>標籤大小</label>
+        <label class="slider"><input type="range" id="size" min="0.6" max="2" step="0.05" value="1" oninput="onSize(this.value)"><span id="sizeVal">1.0</span></label>
+      </div>
+      <div class="field">
+        <label>發音語速</label>
+        <label class="slider"><input type="range" id="rate" min="0.5" max="1.2" step="0.05" value="0.5" oninput="onRate(this.value)"><span id="rateVal">0.5x</span></label>
+      </div>
+      <div class="hint">
+        操作：雙擊圖面加標籤；拖曳移動；Delete 刪除選取。<br>
+        虛線框 = 模型沒給座標，請自己拖到正確位置。<br>
+        點擊單字或句子可發音（en-US）。
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ View 2: Vocab Cards ============ -->
+  <div id="view-cards" class="view">
+    <div>
+      <h2>📇 單字圖卡</h2>
+      <p class="sub">點擊喇叭按鈕發音，複習每個單字的音標與中文意思。</p>
+      <div id="cardsGrid" class="cards-grid">
+        <div class="empty" style="grid-column:1/-1">請先上傳圖片並自動辨識</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ View 3: Flashcards ============ -->
+  <div id="view-flashcards" class="view">
+    <div style="text-align:center">
+      <h2 style="margin-bottom:8px">🎴 翻卡複習</h2>
+      <p style="color:#9ca3af;font-size:13px;margin-bottom:24px">點擊卡片翻面看答案，測試自我記憶</p>
+      <div class="flip-card" id="flipCard" onclick="flipCard()">
+        <div class="flip-card-inner">
+          <div class="flip-front">
+            <div class="f-en" id="fcWord" style="cursor:pointer" onclick="event.stopPropagation();speak($('fcWord').textContent)" title="點擊發音">Word</div>
+            <div class="f-hint">點擊卡片翻面查看答案 · 點擊單字發音</div>
+          </div>
+          <div class="flip-back">
+            <div class="f-ipa" id="fcIpa">[/.../]</div>
+            <div class="f-zh" id="fcZh">中文釋義</div>
+            <div id="fcExample" style="margin-top:12px;padding-top:10px;border-top:1px solid #fbbf2433;width:100%;text-align:left;font-size:11px">
+              <div style="color:#10b981;font-weight:bold;margin-bottom:2px">📗 基礎版</div>
+              <div id="fcExampleEn" style="color:#93c5fd;cursor:pointer;font-size:12px"></div>
+              <div id="fcExampleZh" style="color:#fbbf24;font-size:11px;margin-top:1px"></div>
+              <div style="color:#f59e0b;font-weight:bold;margin-top:8px;margin-bottom:2px">📘 進階版</div>
+              <div id="fcAdvancedEn" style="color:#93c5fd;cursor:pointer;font-size:12px"></div>
+              <div id="fcAdvancedZh" style="color:#fbbf24;font-size:11px;margin-top:1px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flash-controls">
+        <button class="btn gray" onclick="prevFlashcard()">← 上一個</button>
+        <span class="flash-counter" id="fcCounter">1 / 10</span>
+        <button class="btn" onclick="nextFlashcard()">下一個 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ View 4: Quiz ============ -->
+  <div id="view-quiz" class="view">
+    <div class="quiz-box">
+      <div class="quiz-progress-bar">
+        <div class="quiz-progress-fill" id="quizProgress" style="width:0%"></div>
+      </div>
+      <div id="quizContent">
+        <div class="quiz-meta">
+          <span id="quizQNum">問題 1 / 5</span>
+          <span id="quizScore">得分: 0</span>
+        </div>
+        <div class="quiz-question" id="quizQuestion">問題載入中...</div>
+        <div id="quizOptions"></div>
+        <div class="quiz-feedback" id="quizFeedback"></div>
+        <button class="quiz-next-btn" id="quizNextBtn" onclick="nextQuestion()">下一題 →</button>
+      </div>
+      <div id="quizResult" class="quiz-result" style="display:none">
+        <div class="trophy">🏆</div>
+        <h3>測驗完成！</h3>
+        <p id="quizResultText">您的最終得分為 100 分！</p>
+        <button class="btn" onclick="startQuiz()" style="font-size:15px">再次挑戰</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   0. 小工具
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp01 = n => Math.min(1, Math.max(0, n));
+
+/* --- 簡體轉繁體 --- */
+const S2T_PAIRS = '机機车車头頭灯燈马馬鸟鳥鱼魚门門风風云雲电電气氣树樹叶葉阳陽阴陰边邊过過这這为為与與后後发發个個从從会會传傳伞傘两兩关關兴興农農冲衝凉涼减減则則刚剛创創别別动動务務劳勞势勢医醫华華协協单單卖賣卫衛历歷压壓厅廳县縣参參双雙变變号號叹嘆吗嗎员員响響喷噴团團园園围圍图圖场場坏壞块塊坚堅垫墊墙牆壮壯声聲壳殼处處备備复復够夠夹夾夺奪奖獎妇婦妈媽宁寧宝寶实實审審宽寬宾賓对對导導将將尔爾尘塵尽盡层層属屬岁歲岛島岗崗岭嶺币幣师師帅帥带帶帮幫广廣庆慶库庫应應庙廟开開异異弃棄张張弹彈强強归歸当當录錄忆憶忧憂怀懷态態总總恋戀惊驚愿願戏戲战戰户戶执執扩擴扫掃扬揚扰擾抢搶护護报報担擔拥擁择擇挂掛挥揮损損换換据據摄攝摆擺摇搖敌敵数數断斷无無旧舊时時显顯晒曬晓曉暂暫术術杀殺杂雜权權条條来來极極构構枪槍标標栏欄样樣桥橋梦夢检檢楼樓横橫欢歡欧歐残殘毁毀毕畢汇匯汉漢汤湯沟溝泪淚泼潑泽澤洁潔洒灑浅淺浆漿测測济濟浑渾浓濃涛濤润潤渐漸渔漁渗滲湾灣湿濕滚滾满滿滤濾滨濱滩灘灭滅灵靈灾災炉爐点點炼煉烂爛烛燭烦煩烧燙热熱爱愛爷爺牵牽牺犧状狀犹猶独獨狭狹狮獅狱獄猎獵猪豬猫貓献獻疗療疮瘡疯瘋痒癢瘫癱瘾癮癣癬皱皺盏盞盐鹽监監盖蓋盗盜盘盤睁睜瞒瞞矿礦码碼砖磚础礎确確碍礙礼禮祸禍禄祿禅禪离離种種积積称稱秽穢税稅稳穩穷窮窃竊窍竅窝窩窥窺竖豎竞競笋筍笔筆笼籠筑築筛篩筹籌签簽简簡篮籃篱籬类類粮糧紧緊纠糾红紅纤纖约約级級纪紀纯純纳納纵縱纷紛纸紙纹紋纺紡纽紐线線练練组組细細织織终終绍紹经經绑綁绒絨结結绕繞绘繪给給络絡绝絕绞絞统統绢絹绣繡继繼绩績绪緒续續绳繩维維绵綿绷繃绸綢综綜绽綻绿綠缀綴缆纜缉緝缓緩缔締缕縷编編缘緣缚縛缝縫缠纏缩縮缴繳网網罗羅罚罰罢罷耸聳耻恥聋聾职職联聯聪聰肃肅肠腸肤膚肾腎肿腫胀脹胆膽胜勝胶膠脉脈脑腦脚腳脱脫腻膩腾騰舆輿舰艦舱艙艰艱艳豔艺藝节節芜蕪苇葦苍蒼苏蘇苹蘋茎莖茧繭荐薦荡蕩荣榮药藥莱萊莲蓮获獲莹瑩莺鶯萝蘿萤螢营營萧蕭萨薩葱蔥蒋蔣蓝藍蔷薔蔼藹蕴蘊虏虜虑慮虚虛虫蟲虽雖虾蝦蚀蝕蚁蟻蚂螞蚕蠶蛊蠱蛮蠻蛰蟄蜕蛻蜗蝸蝇蠅蝉蟬蝎蠍衔銜补補衬襯袄襖袜襪袭襲装裝裤褲见見观觀规規觅覓视視览覽觉覺触觸誉譽计計订訂认認讥譏讨討让讓训訓议議讯訊记記讲講讳諱讴謳讶訝讷訥许許讹訛论論讼訟讽諷设設访訪诀訣证證评評识識诈詐诉訴诊診词詞译譯试試诗詩诚誠话話诞誕诡詭询詢该該详詳诧詫诫誡诬誣语語误誤诱誘诲誨说說诵誦请請诸諸诺諾读讀课課谁誰调調谅諒谈談谊誼谋謀谎謊谍諜谐諧谓謂谚諺谜謎谢謝谣謠谤謗谦謙谨謹谬謬谭譚谱譜谴譴贝貝贞貞负負贡貢财財责責贤賢败敗账賬货貨质質贩販贪貪贫貧贬貶购購贯貫贰貳贱賤贴貼贵貴贷貸贸貿费費贺賀贼賊贾賈贿賄赁賃赂賂赃贓资資赋賦赌賭赎贖赏賞赐賜赔賴赖賴赘贅赚賺赛賽赞讚赠贈赡贍赢贏赣贛赵趙赶趕趋趨跃躍践踐跷蹺踊踴踌躊踪蹤蹑躡躯軀转轉轮輪软軟轰轟轴軸轻輕载載轿轎较較辅輔辆輛辈輩辉輝辐輻辑輯输輸辖轄辗輾辙轍辞辭辩辯辫辮辽遼达達迁遷迈邁运運还還进進远遠违違连連迟遲迹跡适適选選逊遜递遞逻邏遗遺遥遙邓鄧邮郵邹鄒邻鄰郁鬱郑鄭酝醞酱醬酿釀释釋鉴鑒针針钉釘钓釣钙鈣钝鈍钞鈔钟鐘钠鈉钢鋼钥鑰钦欽钧鈞钨鎢钩鉤钮鈕钱錢钳鉗钵缽钻鑽钾鉀铀鈾铁鐵铃鈴铅鉛铎鐸铐銬铠鎧铭銘铲鏟银銀铸鑄铺鋪链鏈销銷锁鎖锄鋤锅鍋锈鏽锋鋒锐銳错錯锚錨锡錫锣鑼锤錘锥錐锦錦键鍵锯鋸锻鍛镀鍍镂鏤镇鎮镖鏢镜鏡镣鐐镯鐲镰鐮镶鑲长長闪閃闭閉问問闯闖闰閏闲閒间間闷悶闸閘闹鬧闺閨闻聞闽閩阀閥阁閣阅閱阎閻阐闡阑闌阔闊阙闕队隊阵陣阶階际際陆陸陈陳陕陝险險随隨隐隱隶隸难難雏雛雾霧霉黴静靜巩鞏韦韋韧韌韩韓韵韻页頁顶頂顷頃项項顺順须須顽頑顾顧顿頓颁頒颂頌预預领領颇頗颈頸颊頰颐頤频頻颗顆题題颜顏额額颠顛颤顫飘飄飙飆飞飛饥飢饭飯饮飲饰飾饱飽饲飼饵餌饶饒饺餃饼餅饿餓馆館馈饋馋饞馒饅马馬驭馭驯馴驰馳驱驅驳駁驴驢驶駛驹駒驻駐驼駝驾駕驿驛骂罵骄驕骆駱骇駭骋騁验驗骏駿骑騎骗騙骚騷骡騾骤驟鬓鬢鲁魯鲈鱸鲍鮑鲜鮮鲤鯉鲨鯊鲸鯨鳄鱷鳃鰓鳗鰻鳞鱗鸡雞鸣鳴鸥鷗鸦鴉鸭鴨鸯鴦鸳鴛鸽鴿鸿鴻鹅鵝鹊鵲鹏鵬鹤鶴鹦鸚鹰鷹麦麥黄黃齐齊齿齒龙龍龟龜';
+const S2T = (() => { const m = Object.create(null); for (let i = 0; i + 1 < S2T_PAIRS.length; i += 2) m[S2T_PAIRS[i]] = S2T_PAIRS[i + 1]; return m; })();
+const WORD_FIX = [['里面','裡面'],['里边','裡邊'],['里头','裡頭'],['这里','這裡'],['那里','那裡'],['哪里','哪裡'],['心里','心裡'],['家里','家裡'],['嘴里','嘴裡'],['手里','手裡'],['夜里','夜裡'],['面包','麵包'],['面条','麵條'],['干净','乾淨'],['干燥','乾燥'],['一只','一隻'],['两只','兩隻'],['着','著']];
+function toTrad(s) { if (!s) return ''; let t = String(s); WORD_FIX.forEach(([a,b]) => { t = t.split(a).join(b); }); let out = ''; for (const ch of t) out += (S2T[ch] || ch); return out; }
+
+function normalizeIPA(s) { if (!s) return ''; let t = String(s).trim().replace(/^[\[\/]+|[\]\/]+$/g, '').replace(/\s+/g, ' ').trim(); if (!t) return ''; if (!/[a-zɑɒæʌəɜɛɪʊɔθðʃʒŋɹɾˈˌː]/.test(t)) return ''; if (t.length > 60) return ''; return '/' + t + '/'; }
+function toUnit(v) { if (v == null || v === '') return null; let n = Number(String(v).replace(/[^\d.\-]/g, '')); if (!isFinite(n)) return null; if (n > 1) n = (n <= 100) ? n / 100 : n / 1000; if (n < 0 || n > 1) return null; return n; }
+const GRID = {'左上':[0.18,0.20],'中上':[0.50,0.16],'右上':[0.82,0.20],'左中':[0.16,0.50],'正中':[0.50,0.50],'右中':[0.84,0.50],'左下':[0.18,0.82],'中下':[0.50,0.86],'右下':[0.82,0.82]};
+function gridToXY(pos) { if (!pos) return null; const p = String(pos).replace(/\s|　/g, ''); if (GRID[p]) return GRID[p]; for (const k in GRID) if (p.includes(k[0]) && p.includes(k[1])) return GRID[k]; return null; }
+
+function extractJSON(text) {
+  if (!text) return null;
+  let t = String(text).trim().replace(/^```(?:json)?/i, '').replace(/```\s*$/, '').trim();
+  const start = t.indexOf('{'); if (start < 0) return null;
+  t = t.slice(start);
+  try { return JSON.parse(t); } catch (e) {}
+  let depth = 0, inStr = false, escd = false, end = -1;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (inStr) { if (escd) escd = false; else if (c === '\\') escd = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true; else if (c === '{' || c === '[') depth++;
+    else if (c === '}' || c === ']') { depth--; if (depth === 0) { end = i; break; } }
+  }
+  if (end > 0) { try { return JSON.parse(t.slice(0, end + 1)); } catch (e) {} }
+  let s = t; if (inStr) s += '"';
+  let d = 0; for (const c of s) { if (c === '{' || c === '[') d++; else if (c === '}' || c === ']') d--; }
+  s = s.replace(/,\s*$/, '');
+  for (let i = 0; i < d; i++) s += (s.lastIndexOf('[') > s.lastIndexOf('{')) ? ']' : '}';
+  try { return JSON.parse(s); } catch (e) { return null; }
+}
+
+/* ============================================================
+   1. 狀態
+   ============================================================ */
+const stage = $('stage');
+const img = $('img');
+const fileInput = $('file');
+let labels = [];
+let selected = null;
+let sizeScale = 1;
+let sentence = null;
+let grammar = null;
+let speechRate = 0.5;
+let busy = false;
+let currentTab = 'visual';
+let fcIndex = 0;
+let quizIndex = 0;
+let quizScore = 0;
+let quizQuestions = [];
+
+const VLM_DEFAULT = 'qwen3.5:4b';
+const TEXT_DEFAULT = 'qwen2.5:7b';
+const OLLAMA = 'http://127.0.0.1:11434';
+
+function setStatus(msg, kind) { const el = $('status'); el.textContent = msg || '待命'; el.className = kind || ''; }
+
+/* ============================================================
+   2. Tab 切換
+   ============================================================ */
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  $('view-' + tab).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  if (tab === 'cards') renderCards();
+  if (tab === 'flashcards') updateFlashcard();
+  if (tab === 'quiz') { if (!quizQuestions.length) startQuiz(); }
+}
+
+/* ============================================================
+   3. 圖片載入
+   ============================================================ */
+fileInput.addEventListener('change', handleFile);
+$('camera').addEventListener('change', handleFile);
+function handleFile(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    img.onload = () => {
+      labels.forEach(l => l.el.remove()); labels = []; selected = null; sentence = null; grammar = null;
+      renderEditor(); renderSentence(); renderGrammar();
+      setStatus(`已載入 ${img.naturalWidth}×${img.naturalHeight}`, 'ok');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(f);
+  e.target.value = ''; // 重置，讓同一個檔案可以再選
+}
+
+img.addEventListener('dblclick', e => {
+  if (!img.src) { alert('請先選擇圖片'); return; }
+  const r = stage.getBoundingClientRect();
+  addLabel((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height, 'word', '/wɜːrd/', '單字');
+});
+
+/* ============================================================
+   4. 標籤
+   ============================================================ */
+function addLabel(x, y, en, ipa, zh, free) {
+  ipa = ipa || ''; zh = zh || '';
+  const el = document.createElement('div');
+  el.className = 'label' + (free ? ' free' : '');
+  stage.appendChild(el);
+  const lab = { x: clamp01(Number(x) || 0.5), y: clamp01(Number(y) || 0.5), en, ipa, zh, free: !!free, sus: false, el };
+  el.innerHTML = labelHTML(lab);
+  labels.push(lab);
+  positionEl(lab);
+  el.addEventListener('mousedown', e => startDrag(e, lab));
+  el.addEventListener('click', e => { e.stopPropagation(); select(lab); speak(lab.en); });
+  select(lab);
+  return lab;
+}
+function labelHTML(lab) { return `<div class="en">${esc(lab.en)}${lab.ipa ? `<span class="ipa">${esc(lab.ipa)}</span>` : ''}</div><div class="zh">${esc(lab.zh)}</div>`; }
+function refreshLabelEl(lab) { lab.el.innerHTML = labelHTML(lab); positionEl(lab); }
+function positionEl(lab) {
+  const sw = stage.clientWidth, sh = stage.clientHeight;
+  const bw = lab.el.offsetWidth, bh = lab.el.offsetHeight;
+  if (sw > 0 && bw > 0) {
+    const cx = Math.max(bw / 2, Math.min(lab.x * sw, sw - bw / 2));
+    const cy = Math.max(bh / 2, Math.min(lab.y * sh, sh - bh / 2));
+    lab.el.style.left = (cx / sw * 100) + '%';
+    lab.el.style.top = (cy / sh * 100) + '%';
+  } else { lab.el.style.left = (lab.x * 100) + '%'; lab.el.style.top = (lab.y * 100) + '%'; }
+  lab.el.style.fontSize = (14 * sizeScale) + 'px';
+}
+function startDrag(e, lab) {
+  e.preventDefault(); e.stopPropagation(); select(lab);
+  const r = stage.getBoundingClientRect(); let moved = false;
+  function move(ev) { moved = true; lab.x = clamp01((ev.clientX - r.left) / r.width); lab.y = clamp01((ev.clientY - r.top) / r.height); positionEl(lab); }
+  function up() { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); if (moved && lab.free) { lab.free = false; lab.el.classList.remove('free'); } }
+  document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+}
+function select(lab) { if (selected && selected.el) selected.el.classList.remove('sel'); selected = lab; if (lab) lab.el.classList.add('sel'); renderEditor(); }
+stage.addEventListener('mousedown', e => { if (e.target === stage || e.target === img) { if (selected) { selected.el.classList.remove('sel'); selected = null; renderEditor(); } } });
+document.addEventListener('keydown', e => { const tag = (document.activeElement || {}).tagName; if ((e.key === 'Delete' || e.key === 'Backspace') && selected && tag !== 'INPUT' && tag !== 'SELECT') { e.preventDefault(); delSelected(); } });
+
+function renderEditor() {
+  const ed = $('editor');
+  if (!selected) { ed.innerHTML = '<div class="empty">點一下圖上的標籤來編輯</div>'; return; }
+  ed.innerHTML = `
+    <div class="field"><label>英文單字</label>
+      <div class="row"><input id="inEn" value="${esc(selected.en)}" style="flex:3"><button class="btn sm" onclick="speak($('inEn').value)">🔊</button></div>
+    </div>
+    <div class="field"><label>音標 IPA</label><input id="inIpa" value="${esc(selected.ipa)}"></div>
+    <div class="field"><label>中文解釋</label><input id="inZh" value="${esc(selected.zh)}"></div>
+    <div class="row" style="margin-bottom:8px"><button class="btn sm gray" onclick="reidentifySelected()">↻ 重辨</button><button class="btn sm danger" onclick="delSelected()">刪除</button></div>`;
+  $('inEn').addEventListener('input', e => { selected.en = e.target.value; refreshLabelEl(selected); });
+  $('inIpa').addEventListener('input', e => { selected.ipa = e.target.value; refreshLabelEl(selected); });
+  $('inZh').addEventListener('input', e => { selected.zh = e.target.value; refreshLabelEl(selected); });
+}
+function delSelected() { if (!selected) return; selected.el.remove(); labels = labels.filter(l => l !== selected); selected = null; renderEditor(); }
+function clearAll() { if (!labels.length && !sentence) return; if (!confirm('清空所有標籤與句子？')) return; labels.forEach(l => l.el.remove()); labels = []; selected = null; sentence = null; grammar = null; renderEditor(); renderSentence(); renderGrammar(); renderCards(); setStatus('已清空'); }
+function onSize(v) { sizeScale = parseFloat(v); $('sizeVal').textContent = v; labels.forEach(positionEl); }
+
+/* ============================================================
+   5. Ollama 呼叫
+   ============================================================ */
+const LS = { get(k) { try { return localStorage.getItem(k); } catch(e) { return null; } }, set(k,v) { try { localStorage.setItem(k,v); } catch(e) {} } };
+async function listModels() { try { const r = await fetch(OLLAMA + '/api/tags'); if (!r.ok) return []; const d = await r.json(); return (d.models || []).map(m => m.name).sort(); } catch(e) { return []; } }
+async function fillModelSelects() {
+  const names = await listModels();
+  const vlm = $('modelSel'), txt = $('textModelSel');
+  const savedV = LS.get('kw.vlm') || VLM_DEFAULT, savedT = LS.get('kw.text') || TEXT_DEFAULT;
+  // 本地模型 + Groq 雲端模型
+  const groqModels = [
+    'groq:qwen/qwen3.8-27b',
+    'groq:openai/gpt-oss-120b'
+  ];
+  const build = (sel, saved, fb) => {
+    const all = [...names, ...groqModels];
+    sel.innerHTML = all.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    sel.value = all.includes(saved) ? saved : (all.includes(fb) ? fb : all[0]);
+  };
+  build(vlm, savedV, VLM_DEFAULT); build(txt, savedT, TEXT_DEFAULT);
+  const toggleGroqKey = () => {
+    const show = vlm.value.startsWith('groq:') || txt.value.startsWith('groq:');
+    $('groqKeyField').style.display = show ? 'block' : 'none';
+  };
+  vlm.addEventListener('change', () => { LS.set('kw.vlm', vlm.value); toggleGroqKey(); });
+  txt.addEventListener('change', () => { LS.set('kw.text', txt.value); toggleGroqKey(); });
+  toggleGroqKey();
+  // API key 欄位
+  const savedKey = LS.get('kw.groqKey') || '';
+  $('groqKey').value = savedKey;
+  $('groqKey').addEventListener('input', (e) => LS.set('kw.groqKey', e.target.value));
+  if (!names.length) setStatus('⚠ Ollama 沒回應（可用 Groq 雲端模型）', 'err');
+}
+
+async function ollamaChat({ model, prompt, image, json, timeoutMs }) {
+  // Groq 雲端模型
+  if (model.startsWith('groq:')) {
+    const apiKey = LS.get('kw.groqKey') || '';
+    if (!apiKey) throw new Error('請先輸入 Groq API Key');
+    const groqModel = model.slice(5);
+    const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), timeoutMs || 120000);
+    try {
+      const content = image
+        ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + image } }]
+        : prompt;
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({
+          model: groqModel,
+          messages: [{ role: 'user', content: content }],
+          temperature: 0.1,
+          max_tokens: 1400,
+          response_format: json ? { type: 'json_object' } : undefined
+        }),
+        signal: ctl.signal
+      });
+      if (!r.ok) { const t = await r.text(); throw new Error('Groq HTTP ' + r.status + ' ' + t.slice(0, 200)); }
+      const d = await r.json();
+      return { text: d.choices[0].message.content, raw: d };
+    } finally { clearTimeout(timer); }
+  }
+  // 本地 Ollama
+  const body = { model, messages: [{ role: 'user', content: prompt, ...(image ? { images: [image] } : {}) }], stream: false, think: false, options: { temperature: 0.1, num_ctx: 8192, num_predict: 1400, top_p: 0.9 } };
+  if (json) body.format = 'json';
+  const doFetch = async (payload) => {
+    const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), timeoutMs || 120000);
+    try { const r = await fetch(OLLAMA + '/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: ctl.signal }); if (!r.ok) { const t = await r.text(); const err = new Error('HTTP ' + r.status); err.status = r.status; err.body = t; throw err; } return await r.json(); } finally { clearTimeout(timer); }
+  };
+  let data;
+  try { data = await doFetch(body); }
+  catch (e) {
+    if (e.name === 'AbortError') throw new Error('模型逾時');
+    if (e.status === 400 && /think/i.test(e.body || '')) { delete body.think; data = await doFetch(body); }
+    else if (e.status === 400 && /format/i.test(e.body || '')) { delete body.format; data = await doFetch(body); }
+    else throw e;
+  }
+  const m = data.message || {};
+  return { text: m.content || (m.thinking || ''), raw: data };
+}
+
+function makeThumb(maxSide) { const W = img.naturalWidth, H = img.naturalHeight; const s = Math.min(1, (maxSide || 1024) / Math.max(W, H)); const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(W * s)); c.height = Math.max(1, Math.round(H * s)); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.9).split(',')[1]; }
+function cropAround(x, y) { const W = img.naturalWidth, H = img.naturalHeight; let cw = Math.min(W, Math.max(240, W * 0.36)), ch = Math.min(H, Math.max(240, H * 0.36)); let sx = Math.max(0, Math.min(x * W - cw / 2, W - cw)), sy = Math.max(0, Math.min(y * H - ch / 2, H - ch)); const c = document.createElement('canvas'); c.width = Math.round(cw); c.height = Math.round(ch); c.getContext('2d').drawImage(img, sx, sy, cw, ch, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.9).split(',')[1]; }
+
+/* ============================================================
+   6. 清洗
+   ============================================================ */
+const ALIAS = { en: ['en','word','english','name','term','label','vocab'], ipa: ['ipa','phonetic','kk','pronunciation','phonetics'], zh: ['zh','chinese','zh_tw','zhtw','meaning','translation','cn','zhhant'], x: ['x','cx','left','xcoord'], y: ['y','cy','top','ycoord'] };
+function pickField(o, keys) { for (const k of keys) { for (const kk in o) { if (kk.toLowerCase() === k && o[kk] !== '' && o[kk] != null) return o[kk]; } } return undefined; }
+const STOP = new Set(['image','picture','photo','scene','foreground','subject','item','element','part','area','place','view','shot']);
+function cleanLabel(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  let en = String(pickField(raw, ALIAS.en) ?? '').trim().replace(/^["'""「」【】\s]+|["'""「」【】\s]+$/g, '').replace(/[.。,，;；:：!?！？、]+$/g, '').replace(/\s+/g, ' ').toLowerCase();
+  en = en.replace(/^(a|an|the)\s+/, '');
+  if (!en || !/^[a-z][a-z' -]*$/.test(en)) return null;
+  if (en.split(' ').length > 3) return null; if (en.length < 2) return null; if (STOP.has(en)) return null;
+  let zh = toTrad(String(pickField(raw, ALIAS.zh) ?? '').trim()).replace(/^["'""「」\s]+|["'""「」\s]+$/g, '').replace(/[.。,，;；]+$/g, '').trim();
+  if (zh.length > 12) zh = zh.slice(0, 12);
+  const ipa = normalizeIPA(pickField(raw, ALIAS.ipa));
+  let example = String(raw.example || raw.sentence_en || '').trim();
+  let exampleIpa = normalizeIPA(raw.exampleIpa || raw.example_ipa || '');
+  let exampleZh = toTrad(String(raw.exampleZh || raw.example_zh || '').trim());
+  let x = toUnit(pickField(raw, ALIAS.x)), y = toUnit(pickField(raw, ALIAS.y));
+  let free = false;
+  if (x === null || y === null) { const g = gridToXY(pickField(raw, ['pos','position','place'])); if (g) { x = g[0]; y = g[1]; } else { x = 0.5; y = 0.5; free = true; } }
+  return { en, ipa, zh, x, y, free, example, exampleIpa, exampleZh };
+}
+function dedupeAndSpread(list) {
+  const seen = new Set(), out = [];
+  for (const l of list) { if (seen.has(l.en)) continue; seen.add(l.en); out.push(l); }
+  const minD = 0.085;
+  for (let iter = 0; iter < 80; iter++) {
+    let moved = false;
+    for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) {
+      const a = out[i], b = out[j]; let dx = b.x - a.x, dy = b.y - a.y; let d = Math.hypot(dx, dy);
+      if (d < 1e-6) { dx = 0.01; dy = 0.01; d = Math.hypot(dx, dy); }
+      if (d < minD) { const push = (minD - d) / d / 2 * 1.08; a.x -= dx * push; a.y -= dy * push; b.x += dx * push; b.y += dy * push; moved = true; }
+    }
+    out.forEach(l => { l.x = clamp01(l.x); l.y = clamp01(l.y); });
+    if (!moved) break;
+  }
+  return out;
+}
+
+/* ============================================================
+   7. Prompt
+   ============================================================ */
+const PROMPT_MAIN = n => `看這張圖，標出圖中真正看得見的東西，並寫一句英文描述句。只輸出 JSON，不要任何說明。
+規則：1. 剛好 ${n} 個標註。只標看得見的具體人、物、部位、環境。2. 不要推測身份。3. 形容詞不要標，只標名詞。4. x、y 是那個東西中心的相對位置 0→1。5. en 小寫英文單數名詞 A2-B1 程度。6. ipa 是 KK 音標前後加斜線。7. zh 是繁體中文 2-4 字。8. 每個 label 要有 example：一個 5-8 字的簡單英文例句，包含這個單字；exampleIpa 是例句音標；exampleZh 是例句繁體中文翻譯。9. sentence.en 一句 8-14 字至少含 3 個標到的單字。10. sentence.ipa 整句音標；sentence.zh 繁體中文。
+輸出格式：{"labels":[{"en":"ramp","ipa":"/ræmp/","zh":"斜坡","x":0.76,"y":0.35,"example":"The ramp is steep.","exampleIpa":"/ðə ræmp ɪz stiːp/","exampleZh":"斜坡很陡。"}],"sentence":{"en":"The rider goes up the ramp at night.","ipa":"/ðə ˈraɪdər ɡoʊz ʌp ðə ræmp æt naɪt/","zh":"騎士在夜晚騎上斜坡。"}}`;
+const PROMPT_MORE = (have, need) => `看這張圖。已經標過：${JSON.stringify(have)}。請再找出 ${need} 個圖中還看得到的東西。只輸出 JSON：{"labels":[{"en":"","ipa":"","zh":"","x":0.5,"y":0.5}]}`;
+const PROMPT_RETRY = n => `看圖，列出圖中看得見的東西。只輸出 JSON。{"labels":[{"en":"window","ipa":"/ˈwɪndoʊ/","zh":"窗戶","x":0.4,"y":0.5}]}\n${n} 個，x、y 0到1。en 小寫英文，zh 繁體中文。`;
+const PROMPT_VERIFY = words => `看這張圖，判斷清單裡每個英文單字指的東西在圖中有沒有出現。清單：${JSON.stringify(words)}。只輸出 JSON：{"check":[{"en":"字","seen":true}]}`;
+const PROMPT_ONE = `這張小圖中間的東西，英文單字是什麼？只輸出 JSON：{"en":"","ipa":"","zh":""}`;
+const PROMPT_SENT = (pairs, missing) => `用下面全部 ${pairs.length} 個英文單字，寫 2 到 3 句英文描述這張圖。只輸出 JSON：{"sentences":[{"en":"","zh":"","ipa":""}]}
+規則：1. 每一個字都必須至少出現一次。2. 總共 2-3 句每句 6-14 字。3. 基礎句型不要用分詞構句。4. 完整正確英文。5. 句子連貫。6. en 不要放音標。7. 每句給 ipa 和 zh 繁體中文。
+單字：${pairs.join('、')}${missing ? '\n漏掉的：' + missing.join(', ') : ''}`;
+const PROMPT_GRAMMAR = `你是英文文法老師。下面是一段看圖描述的英文。請拆解句型，用繁體中文說明。只輸出 JSON。
+句子：`;
+const PROMPT_GRAMMAR_TAIL = `
+輸出格式：{"structure":[{"title":"結構名稱","phrase":"從原句摘出的連續英文片段","detail":"2-4 句中文說明"}],"highlights":["文法亮點一","文法亮點二"]}`;
+
+const PROMPT_EXAMPLES = (words, sceneDesc) => `你是英文老師。下面是一張圖片的場景描述，以及圖中出現的 ${words.length} 個英文單字。請為每個單字寫兩個符合這個圖片場景的英文例句：
+- 基礎版：5-8 個字，簡單清楚，適合初學者
+- 進階版：8-12 個字，稍微複雜一點，適合中級
+場景：${sceneDesc}
+單字清單：${words.map(w => w.en + '（' + w.zh + '）').join('、')}
+
+只輸出 JSON，不要其他文字：
+{"examples":[{"en":"word","basic":"The cat sits on the mat.","basicIpa":"/ðə kæt sɪts ɑːn ðə mæt/","basicZh":"貓坐在墊子上。","advanced":"The black cat sits quietly on the soft mat.","advancedIpa":"/ðə blæk kæt sɪts ˈkwaɪətli ɑːn ðə sɔːft mæt/","advancedZh":"黑貓安靜地坐在柔軟的墊子上。"}]}
+
+規則：
+1. 每個單字都要有一筆，en 必須是清單裡的原字
+2. basic 是 5-8 字的簡單英文句子，一定要包含這個單字
+3. basicIpa 是基礎版的 KK 音標，前後加斜線
+4. basicZh 是基礎版的繁體中文翻譯（台灣用語）
+5. advanced 是 8-12 字的進階英文句子，一定要包含這個單字
+6. advancedIpa 是進階版的 KK 音標，前後加斜線
+7. advancedZh 是進階版的繁體中文翻譯
+8. 兩個例句都要符合圖片場景，不要隨便寫`;
+
+/* ============================================================
+   8. 主流程
+   ============================================================ */
+async function autoLabel() {
+  if (!img.src || !img.naturalWidth) { alert('請先選擇圖片'); return; }
+  if (busy) return; busy = true;
+  const btn = $('autoBtn'); btn.disabled = true; btn.textContent = '🤖 辨識中...';
+  const model = $('modelSel').value || VLM_DEFAULT;
+  const target = Math.max(1, Math.min(20, parseInt($('targetCount').value, 10) || 10));
+  try {
+    await img.decode().catch(() => {});
+    const thumb = makeThumb(1024);
+    setStatus('辨識中…');
+    let obj = null, lastErr = '';
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const { text } = await ollamaChat({ model, prompt: attempt === 1 ? PROMPT_MAIN(target) : PROMPT_RETRY(target), image: thumb, json: true, timeoutMs: attempt === 1 ? 150000 : 90000 });
+        if (!text || !text.trim()) { lastErr = '模型回傳空內容'; continue; }
+        const parsed = extractJSON(text); if (!parsed) { lastErr = '模型沒有回傳可用 JSON'; continue; }
+        obj = parsed; break;
+      } catch (e) { lastErr = e.message; }
+    }
+    if (!obj) throw new Error(lastErr || '辨識失敗');
+    let cleaned = (Array.isArray(obj.labels) ? obj.labels : []).map(cleanLabel).filter(Boolean);
+    cleaned = dedupeAndSpread(cleaned).slice(0, target);
+    if (!cleaned.length) throw new Error('模型沒有給出有效單字');
+    for (let round = 0; round < 2 && cleaned.length < target; round++) {
+      try {
+        const { text } = await ollamaChat({ model, prompt: PROMPT_MORE(cleaned.map(l => l.en), target - cleaned.length), image: thumb, json: true, timeoutMs: 90000 });
+        const o2 = extractJSON(text) || {};
+        const more = (Array.isArray(o2.labels) ? o2.labels : []).map(cleanLabel).filter(Boolean);
+        const have = new Set(cleaned.map(l => l.en));
+        more.forEach(m => { if (!have.has(m.en)) { have.add(m.en); cleaned.push(m); } });
+        cleaned = dedupeAndSpread(cleaned);
+      } catch(e) { break; }
+    }
+    cleaned = cleaned.slice(0, target);
+    labels.forEach(l => l.el.remove()); labels = []; selected = null;
+    cleaned.forEach(l => addLabel(l.x, l.y, l.en, l.ipa, l.zh, l.free));
+    sentence = normalizeSentenceObj(obj.sentence) || fallbackSentence(cleaned);
+    grammar = null; renderEditor(); renderSentence(); renderGrammar();
+    setStatus(`✓ ${cleaned.length} 個標籤，生成例句中…`, 'ok');
+
+    // 用文字模型為每個單字生成符合圖片情境的例句
+    await generateExamples(cleaned);
+
+    await composeSentence(); buildGrammar();
+    renderCards();
+  } catch (e) {
+    setStatus('✗ ' + e.message, 'err');
+    alert('自動辨識失敗：' + e.message + '\n\n請確認 Ollama 服務在 127.0.0.1:11434 運作中。');
+  } finally { busy = false; btn.disabled = false; btn.textContent = '🤖 自動辨識'; }
+}
+
+function fallbackSentence(list) { const w = list.slice(0, 3).map(l => 'a ' + l.en); return joinSentence([{ en: 'The picture shows ' + (w.length > 1 ? w.slice(0,-1).join(', ') + ' and ' + w[w.length-1] : w[0] || 'a scene') + '.', ipa: '', zh: '（自動產生）' }]); }
+function joinSentence(lines) { const ls = lines.filter(l => l && l.en); return { lines: ls, en: ls.map(l => l.en).join(' '), ipa: ls.map(l => l.ipa).filter(Boolean).join(' '), zh: ls.map(l => l.zh).filter(Boolean).join('') }; }
+function normalizeSentenceObj(o) {
+  if (!o || typeof o !== 'object') return null;
+  const arr = Array.isArray(o.sentences) ? o.sentences : (Array.isArray(o.lines) ? o.lines : null);
+  let lines = [];
+  if (arr) { lines = arr.map(s => { if (typeof s === 'string') return { en: s.trim(), ipa: '', zh: '' }; return { en: String(s.en||'').trim(), ipa: normalizeIPA(s.ipa||''), zh: toTrad(String(s.zh||'').trim()) }; }).filter(l => l.en); }
+  if (!lines.length && o.en) lines = [{ en: String(o.en).trim(), ipa: normalizeIPA(o.ipa||''), zh: toTrad(String(o.zh||'').trim()) }];
+  return lines.length ? joinSentence(lines) : null;
+}
+const tokenize = t => String(t||'').toLowerCase().replace(/[^a-z' ]/g, ' ').split(/\s+/).filter(Boolean);
+const baseForm = w => w.replace(/ies$/, 'y').replace(/es$/, '').replace(/s$/, '');
+function wordUsed(w, tokens) { const b = baseForm(w); return tokens.some(t => t === w || baseForm(t) === b || (b.length >= 4 && t.startsWith(b) && t.length - b.length <= 4)); }
+function coverage(en, words) { const tokens = tokenize(en); const used = words.filter(w => wordUsed(w, tokens)); return { used: used.length, total: words.length, missing: words.filter(w => !used.includes(w)) }; }
+
+async function composeSentence() {
+  if (!labels.length) return;
+  const model = $('textModelSel').value || TEXT_DEFAULT;
+  const words = labels.map(l => l.en);
+  const pairs = labels.map(l => l.en + '（' + (l.zh||'') + '）');
+  setStatus('造句中…');
+  let best = null, bestScore = -1;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const { text } = await ollamaChat({ model, prompt: PROMPT_SENT(pairs, best ? best.cover.missing : null), json: true, timeoutMs: 90000 });
+      const o = extractJSON(text); if (!o) continue;
+      const cand = normalizeSentenceObj(o); if (!cand) continue;
+      cand.lines = cand.lines.slice(0, 3); cand.en = cand.lines.map(l => l.en).join(' ');
+      if (!cand.lines.every(l => l.en && l.en.length > 8)) continue;
+      cand.cover = coverage(cand.en, words);
+      const score = cand.cover.used * 10 + (cand.lines.length >= 2 ? 3 : 0);
+      if (score > bestScore) { best = cand; bestScore = score; }
+      if (cand.cover.used === cand.cover.total && cand.lines.length >= 2) break;
+    } catch(e) { break; }
+  }
+  if (best) { sentence = best; renderSentence(); }
+}
+
+async function buildGrammar() {
+  if (!sentence || !sentence.en) return;
+  const model = $('textModelSel').value || TEXT_DEFAULT;
+  try {
+    const { text } = await ollamaChat({ model, prompt: PROMPT_GRAMMAR + sentence.en + PROMPT_GRAMMAR_TAIL, json: true, timeoutMs: 90000 });
+    const g = extractJSON(text);
+    if (g && (g.structure || g.highlights)) {
+      grammar = { structure: (g.structure || []).map(x => ({ title: toTrad(x.title), phrase: String(x.phrase||'').trim(), detail: toTrad(x.detail) })).filter(x => x.detail), highlights: (g.highlights || []).map(toTrad).filter(Boolean) };
+      grammar.structure = grammar.structure.filter(s => !s.phrase || sentence.en.includes(s.phrase));
+      renderGrammar();
+    }
+  } catch(e) {}
+}
+
+async function generateExamples(words) {
+  const model = $('textModelSel').value || TEXT_DEFAULT;
+  const sceneDesc = sentence ? sentence.en : 'A scene from the photo';
+  try {
+    setStatus('生成單字例句中…');
+    const { text } = await ollamaChat({
+      model,
+      prompt: PROMPT_EXAMPLES(words, sceneDesc),
+      json: true, timeoutMs: 90000
+    });
+    const o = extractJSON(text);
+    if (!o || !o.examples) return;
+    // 建立映射：en → example
+    const map = {};
+    o.examples.forEach(e => {
+      const en = String(e.en || '').toLowerCase().trim();
+      if (en) map[en] = {
+        basic: String(e.basic || e.example || '').trim(),
+        basicIpa: normalizeIPA(e.basicIpa || e.exampleIpa || ''),
+        basicZh: toTrad(String(e.basicZh || e.exampleZh || '').trim()),
+        advanced: String(e.advanced || '').trim(),
+        advancedIpa: normalizeIPA(e.advancedIpa || ''),
+        advancedZh: toTrad(String(e.advancedZh || '').trim())
+      };
+    });
+    // 更新到 labels
+    labels.forEach(l => {
+      const hit = map[l.en.toLowerCase()];
+      if (hit && hit.basic) {
+        l.example = hit.basic;
+        l.exampleIpa = hit.basicIpa;
+        l.exampleZh = hit.basicZh;
+        l.advanced = hit.advanced;
+        l.advancedIpa = hit.advancedIpa;
+        l.advancedZh = hit.advancedZh;
+      }
+    });
+    // 如果還有缺的，用 fallback 補
+    labels.forEach(l => {
+      if (!l.example) {
+        l.example = `The ${l.en} is in the picture.`;
+        l.exampleZh = `這張圖中有${l.zh}。`;
+      }
+    });
+    renderCards();
+  } catch(e) {
+    console.warn('generateExamples failed', e);
+    // 失敗就用 fallback
+    labels.forEach(l => {
+      if (!l.example) {
+        l.example = `The ${l.en} is in the picture.`;
+        l.exampleZh = `這張圖中有${l.zh}。`;
+      }
+    });
+  }
+}
+
+async function reidentifySelected() {
+  if (!selected || busy) return; busy = true;
+  const lab = selected, model = $('modelSel').value || VLM_DEFAULT;
+  try {
+    const { text } = await ollamaChat({ model, prompt: PROMPT_ONE, image: cropAround(lab.x, lab.y), json: true, timeoutMs: 90000 });
+    const o = extractJSON(text); if (!o) throw new Error('沒有回傳');
+    const en = String(pickField(o, ALIAS.en) || '').trim().toLowerCase(); if (!en) throw new Error('沒有辨識出');
+    lab.en = en; lab.ipa = normalizeIPA(pickField(o, ALIAS.ipa)) || lab.ipa;
+    const zh = toTrad(String(pickField(o, ALIAS.zh) || '').trim()); if (zh) lab.zh = zh;
+    refreshLabelEl(lab); renderEditor();
+  } catch(e) { setStatus('✗ 重辨失敗', 'err'); } finally { busy = false; }
+}
+
+async function verifyLabels() {
+  if (!labels.length || busy) return; busy = true;
+  const model = $('modelSel').value || VLM_DEFAULT;
+  try {
+    const words = labels.map(l => l.en);
+    const { text } = await ollamaChat({ model, prompt: PROMPT_VERIFY(words), image: makeThumb(1024), json: true, timeoutMs: 90000 });
+    const o = extractJSON(text) || {};
+    const missSet = new Set();
+    (o.check || []).forEach(e => { if (!e.seen) missSet.add(String(e.en||'').toLowerCase()); });
+    labels.forEach(l => { l.sus = missSet.has(l.en); l.el.classList.toggle('sus', l.sus); });
+    setStatus(missSet.size ? `⚠ ${missSet.size} 個可能不在圖中` : '✓ 所有標籤都在圖中', missSet.size ? 'err' : 'ok');
+  } catch(e) { setStatus('✗ 驗證失敗', 'err'); } finally { busy = false; }
+}
+
+/* ============================================================
+   9. 句子 / 文法呈現
+   ============================================================ */
+function renderSentence() {
+  const box = $('sentenceBox');
+  if (!sentence) { box.innerHTML = '<div class="empty">自動辨識後自動產生</div>'; return; }
+  const lines = (sentence.lines && sentence.lines.length) ? sentence.lines : [{ en: sentence.en, ipa: sentence.ipa || '', zh: sentence.zh || '' }];
+  box.innerHTML = `
+    <div class="en" onclick="speak('${esc(sentence.en).replace(/'/g, "\\'")}')">${lines.map(l => `<div class="sent-line">${esc(l.en)} 🔊</div>`).join('')}</div>
+    ${lines.map(l => l.ipa ? `<div class="ipa">${esc(l.ipa)}</div>` : '').join('')}
+    ${lines.map(l => l.zh ? `<div>${esc(l.zh)}</div>` : '').join('')}
+    <div style="margin-top:8px"><button class="btn sm gray" onclick="composeSentence()">✎ 重寫句子</button></div>`;
+}
+
+function renderGrammar() {
+  const box = $('grammarBox');
+  if (!grammar) { box.innerHTML = ''; return; }
+  let html = '';
+  (grammar.structure || []).forEach((s, i) => {
+    html += `<div class="grammar-item"><div class="g-title">${i+1}. ${esc(s.title)}</div>${s.phrase ? `<div class="g-phrase">「${esc(s.phrase)}」</div>` : ''}<div>${esc(s.detail)}</div></div>`;
+  });
+  if (grammar.highlights && grammar.highlights.length) {
+    html += `<div class="grammar-item"><div class="g-title">文法亮點</div>${grammar.highlights.map(h => `<div>• ${esc(h)}</div>`).join('')}</div>`;
+  }
+  box.innerHTML = html;
+}
+
+/* ============================================================
+   10. 單字圖卡 View
+   ============================================================ */
+function renderCards() {
+  const grid = $('cardsGrid');
+  if (!labels.length) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1">請先上傳圖片並自動辨識</div>'; return; }
+  grid.innerHTML = labels.map(l => `
+    <div class="vcard">
+      <div class="v-head">
+        <div>
+          <span class="v-en" style="cursor:pointer;text-decoration:underline dotted" onclick="speak('${esc(l.en).replace(/'/g, "\\'")}')" title="點擊發音">${esc(l.en)}</span>
+          <span class="v-ipa">${esc(l.ipa)}</span>
+        </div>
+      </div>
+      <div class="v-zh">${esc(l.zh)}</div>
+      ${l.example ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #3a3f4b;text-align:left">
+        <div style="font-size:10px;color:#10b981;font-weight:bold;margin-bottom:4px">📗 基礎版</div>
+        <div style="font-size:13px;color:#93c5fd;cursor:pointer" onclick="speak('${esc(l.example).replace(/'/g, "\\'")}')" title="點擊發音">${esc(l.example)}</div>
+        ${l.exampleIpa ? `<div style="font-size:11px;color:#9ca3af;margin-top:2px">${esc(l.exampleIpa)}</div>` : ''}
+        ${l.exampleZh ? `<div style="font-size:12px;color:#fbbf24;margin-top:2px">${esc(l.exampleZh)}</div>` : ''}
+      </div>` : ''}
+      ${l.advanced ? `
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #3a3f4b;text-align:left">
+        <div style="font-size:10px;color:#f59e0b;font-weight:bold;margin-bottom:4px">📘 進階版</div>
+        <div style="font-size:13px;color:#93c5fd;cursor:pointer" onclick="speak('${esc(l.advanced).replace(/'/g, "\\'")}')" title="點擊發音">${esc(l.advanced)}</div>
+        ${l.advancedIpa ? `<div style="font-size:11px;color:#9ca3af;margin-top:2px">${esc(l.advancedIpa)}</div>` : ''}
+        ${l.advancedZh ? `<div style="font-size:12px;color:#fbbf24;margin-top:2px">${esc(l.advancedZh)}</div>` : ''}
+      </div>` : ''}
+    </div>`).join('');
+}
+
+/* ============================================================
+   11. 翻卡 View
+   ============================================================ */
+function flipCard() { $('flipCard').classList.toggle('flipped'); }
+function updateFlashcard() {
+  const card = $('flipCard'); card.classList.remove('flipped');
+  if (!labels.length) { $('fcWord').textContent = '無單字'; $('fcIpa').textContent = ''; $('fcZh').textContent = '請先辨識'; $('fcCounter').textContent = '0 / 0'; $('fcExampleEn').textContent = ''; $('fcExampleZh').textContent = ''; $('fcAdvancedEn').textContent = ''; $('fcAdvancedZh').textContent = ''; return; }
+  if (fcIndex >= labels.length) fcIndex = 0;
+  const l = labels[fcIndex];
+  setTimeout(() => {
+    $('fcWord').textContent = l.en;
+    $('fcIpa').textContent = l.ipa || '';
+    $('fcZh').textContent = l.zh || '';
+    $('fcExampleEn').textContent = l.example || '';
+    $('fcExampleZh').textContent = l.exampleZh || '';
+    $('fcAdvancedEn').textContent = l.advanced || '';
+    $('fcAdvancedZh').textContent = l.advancedZh || '';
+    $('fcCounter').textContent = (fcIndex+1) + ' / ' + labels.length;
+  }, 150);
+  // 例句點擊發音
+  $('fcExampleEn').onclick = (e) => { e.stopPropagation(); if (l.example) speak(l.example); };
+  $('fcAdvancedEn').onclick = (e) => { e.stopPropagation(); if (l.advanced) speak(l.advanced); };
+}
+function nextFlashcard() { if (labels.length) { fcIndex = (fcIndex + 1) % labels.length; updateFlashcard(); } }
+function prevFlashcard() { if (labels.length) { fcIndex = (fcIndex - 1 + labels.length) % labels.length; updateFlashcard(); } }
+
+/* ============================================================
+   12. 隨堂小測 View
+   ============================================================ */
+function startQuiz() {
+  if (labels.length < 3) { alert('至少需要 3 個單字才能測驗'); return; }
+  quizIndex = 0; quizScore = 0;
+  $('quizContent').style.display = ''; $('quizResult').style.display = 'none';
+  quizQuestions = buildQuizQuestions();
+  renderQuizQuestion();
+}
+
+function buildQuizQuestions() {
+  const qs = [];
+  const pool = [...labels];
+  // 題型1: 英文選中文
+  for (let i = 0; i < Math.min(3, pool.length); i++) {
+    const correct = pool[i];
+    const others = pool.filter(l => l !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
+    const opts = [correct.zh, ...others.map(l => l.zh)].sort(() => Math.random() - 0.5);
+    qs.push({ q: `「${correct.en}」的中文意思是？`, options: opts, answer: opts.indexOf(correct.zh), explain: `${correct.en} ${correct.ipa} = ${correct.zh}` });
+  }
+  // 題型2: 中文選英文
+  for (let i = 3; i < Math.min(5, pool.length); i++) {
+    const correct = pool[i];
+    const others = pool.filter(l => l !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
+    const opts = [correct.en, ...others.map(l => l.en)].sort(() => Math.random() - 0.5);
+    qs.push({ q: `「${correct.zh}」的英文是？`, options: opts, answer: opts.indexOf(correct.en), explain: `${correct.zh} = ${correct.en} ${correct.ipa}` });
+  }
+  return qs.sort(() => Math.random() - 0.5);
+}
+
+let selectedOption = null;
+
+function renderQuizQuestion() {
+  const q = quizQuestions[quizIndex];
+  selectedOption = null;
+  $('quizQNum').textContent = `問題 ${quizIndex+1} / ${quizQuestions.length}`;
+  $('quizScore').textContent = `得分: ${quizScore}`;
+  $('quizQuestion').textContent = q.q;
+  $('quizProgress').style.width = (quizIndex / quizQuestions.length * 100) + '%';
+  const oc = $('quizOptions'); oc.innerHTML = '';
+  $('quizFeedback').className = 'quiz-feedback'; $('quizFeedback').textContent = '';
+  $('quizNextBtn').classList.remove('show');
+  // 加入確認答案按鈕
+  let confirmBtn = $('quizConfirmBtn');
+  if (!confirmBtn) {
+    confirmBtn = document.createElement('button');
+    confirmBtn.id = 'quizConfirmBtn';
+    confirmBtn.className = 'btn';
+    confirmBtn.style.cssText = 'width:100%;margin-top:12px;padding:12px;font-size:15px;display:none';
+    confirmBtn.textContent = '✓ 確認答案';
+    confirmBtn.onclick = confirmAnswer;
+    oc.parentNode.insertBefore(confirmBtn, $('quizFeedback'));
+  }
+  confirmBtn.style.display = 'none';
+  q.options.forEach((opt, idx) => {
+    const b = document.createElement('button');
+    b.className = 'quiz-option'; b.textContent = opt;
+    b.onclick = () => selectOption(idx);
+    oc.appendChild(b);
+  });
+}
+
+function selectOption(idx) {
+  if (selectedOption !== null) return; // 已經選過就不能再選
+  selectedOption = idx;
+  const opts = $('quizOptions').children;
+  for (let i = 0; i < opts.length; i++) {
+    if (i === idx) {
+      opts[i].style.borderColor = '#3b82f6';
+      opts[i].style.background = '#3b82f633';
+    } else {
+      opts[i].style.opacity = '0.5';
+    }
+  }
+  $('quizConfirmBtn').style.display = 'block';
+}
+
+function confirmAnswer() {
+  if (selectedOption === null) return;
+  const q = quizQuestions[quizIndex];
+  const opts = $('quizOptions').children;
+  $('quizConfirmBtn').style.display = 'none';
+  for (let b of opts) b.disabled = true;
+  const fb = $('quizFeedback');
+  if (selectedOption === q.answer) {
+    quizScore += 20;
+    opts[selectedOption].classList.add('correct');
+    fb.className = 'quiz-feedback show good'; fb.innerHTML = `✓ 答對了！${q.explain}`;
+  } else {
+    opts[selectedOption].classList.add('wrong');
+    opts[q.answer].classList.add('correct');
+    fb.className = 'quiz-feedback show bad'; fb.innerHTML = `✗ 答錯了！正確答案：${q.options[q.answer]}<br>${q.explain}`;
+  }
+  $('quizScore').textContent = `得分: ${quizScore}`;
+  $('quizNextBtn').classList.add('show');
+}
+
+function nextQuestion() {
+  quizIndex++;
+  if (quizIndex < quizQuestions.length) renderQuizQuestion();
+  else {
+    $('quizProgress').style.width = '100%';
+    $('quizContent').style.display = 'none';
+    $('quizResult').style.display = '';
+    $('quizResultText').textContent = `您的最終得分為 ${quizScore} 分！${quizScore >= 80 ? '太棒了，你是單字達人！' : '加油，再複習一下吧！'}`;
+  }
+}
+
+/* ============================================================
+   13. 發音
+   ============================================================ */
+function onRate(v) { speechRate = parseFloat(v); $('rateVal').textContent = v + 'x'; }
+function speak(text) {
+  if (!text) return;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = speechRate; speechSynthesis.speak(u); } catch(e) { alert('瀏覽器不支援發音'); }
+}
+
+/* ============================================================
+   14. 匯出 PNG
+   ============================================================ */
+function exportPNG() {
+  if (!img.src) { alert('請先選擇圖片'); return; }
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const c = document.createElement('canvas'); c.width = W; c.height = H + 80;
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H + 80);
+  ctx.drawImage(img, 0, 0, W, H);
+  if (sentence) {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
+    ctx.font = `700 ${Math.round(H*0.025)}px "Segoe UI", sans-serif`;
+    ctx.fillText(sentence.en, W/2, H + 25);
+    ctx.fillStyle = '#bbb'; ctx.font = `${Math.round(H*0.016)}px "Segoe UI", sans-serif`;
+    if (sentence.ipa) ctx.fillText(sentence.ipa, W/2, H + 48);
+    ctx.fillStyle = '#fff'; ctx.font = `${Math.round(H*0.018)}px "Microsoft JhengHei", sans-serif`;
+    if (sentence.zh) ctx.fillText(sentence.zh, W/2, H + 68);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  labels.forEach(lab => {
+    ctx.font = `800 ${Math.round(H*0.026)}px "Segoe UI", sans-serif`;
+    ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.fillStyle = '#ff2d2d';
+    const txt = lab.en + (lab.ipa ? ' ' + lab.ipa : '');
+    ctx.strokeText(txt, lab.x*W, lab.y*H); ctx.fillText(txt, lab.x*W, lab.y*H);
+    if (lab.zh) { ctx.font = `${Math.round(H*0.017)}px "Microsoft JhengHei", sans-serif`; ctx.fillStyle = '#fff'; ctx.fillText(lab.zh, lab.x*W, lab.y*H + 18); }
+  });
+  const a = document.createElement('a'); a.download = 'annotated.png'; a.href = c.toDataURL('image/png'); a.click();
+}
+
+/* ============================================================
+   15. 啟動
+   ============================================================ */
+fillModelSelects();
+(function initTarget() { const el = $('targetCount'); const v = LS.get('kw.target'); if (v) el.value = v; el.addEventListener('change', () => { el.value = Math.max(1, Math.min(20, parseInt(el.value,10)||10)); LS.set('kw.target', el.value); }); })();
+setStatus('待命');
+</script>
+</body>
+</html>
