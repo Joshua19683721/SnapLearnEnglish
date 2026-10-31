@@ -275,9 +275,11 @@
             <div id="fcExample" style="margin-top:12px;padding-top:10px;border-top:1px solid #fbbf2433;width:100%;text-align:left;font-size:11px">
               <div style="color:#10b981;font-weight:bold;margin-bottom:2px">📗 基礎版</div>
               <div id="fcExampleEn" style="color:#93c5fd;cursor:pointer;font-size:12px"></div>
+              <div id="fcExampleIpa" style="color:#9ca3af;font-size:11px;margin-top:1px;font-family:monospace"></div>
               <div id="fcExampleZh" style="color:#fbbf24;font-size:11px;margin-top:1px"></div>
               <div style="color:#f59e0b;font-weight:bold;margin-top:8px;margin-bottom:2px">📘 進階版</div>
               <div id="fcAdvancedEn" style="color:#93c5fd;cursor:pointer;font-size:12px"></div>
+              <div id="fcAdvancedIpa" style="color:#9ca3af;font-size:11px;margin-top:1px;font-family:monospace"></div>
               <div id="fcAdvancedZh" style="color:#fbbf24;font-size:11px;margin-top:1px"></div>
             </div>
           </div>
@@ -332,7 +334,7 @@ const S2T = (() => { const m = Object.create(null); for (let i = 0; i + 1 < S2T_
 const WORD_FIX = [['里面','裡面'],['里边','裡邊'],['里头','裡頭'],['这里','這裡'],['那里','那裡'],['哪里','哪裡'],['心里','心裡'],['家里','家裡'],['嘴里','嘴裡'],['手里','手裡'],['夜里','夜裡'],['面包','麵包'],['面条','麵條'],['干净','乾淨'],['干燥','乾燥'],['一只','一隻'],['两只','兩隻'],['着','著']];
 function toTrad(s) { if (!s) return ''; let t = String(s); WORD_FIX.forEach(([a,b]) => { t = t.split(a).join(b); }); let out = ''; for (const ch of t) out += (S2T[ch] || ch); return out; }
 
-function normalizeIPA(s) { if (!s) return ''; let t = String(s).trim().replace(/^[\[\/]+|[\]\/]+$/g, '').replace(/\s+/g, ' ').trim(); if (!t) return ''; if (!/[a-zɑɒæʌəɜɛɪʊɔθðʃʒŋɹɾˈˌː]/.test(t)) return ''; if (t.length > 60) return ''; return '/' + t + '/'; }
+function normalizeIPA(s) { if (!s) return ''; let t = String(s).trim().replace(/^[\[\/]+|[\]\/]+$/g, '').replace(/\s+/g, ' ').trim(); if (!t) return ''; if (!/[a-zɑɒæʌəɜɛɪʊɔθðʃʒŋɹɾˈˌː]/.test(t)) return ''; if (t.length > 220) return ''; return '/' + t + '/'; }
 function toUnit(v) { if (v == null || v === '') return null; let n = Number(String(v).replace(/[^\d.\-]/g, '')); if (!isFinite(n)) return null; if (n > 1) n = (n <= 100) ? n / 100 : n / 1000; if (n < 0 || n > 1) return null; return n; }
 const GRID = {'左上':[0.18,0.20],'中上':[0.50,0.16],'右上':[0.82,0.20],'左中':[0.16,0.50],'正中':[0.50,0.50],'右中':[0.84,0.50],'左下':[0.18,0.82],'中下':[0.50,0.86],'右下':[0.82,0.82]};
 function gridToXY(pos) { if (!pos) return null; const p = String(pos).replace(/\s|　/g, ''); if (GRID[p]) return GRID[p]; for (const k in GRID) if (p.includes(k[0]) && p.includes(k[1])) return GRID[k]; return null; }
@@ -759,6 +761,17 @@ const PROMPT_EXAMPLES = (words, sceneDesc, retry) => `你是英文老師。場�
 4. 音標若不確定就填空字串 ""，不要亂造
 5. 兩個例句都要符合上面的場景${retry ? '\n6. 上一次的回覆格式不正確。這次務必只輸出上面格式的 JSON 物件。' : ''}`;
 
+const PROMPT_IPA = (words, sentences) => `你是英文發音老師。請提供下列英文的 IPA 音標（美式發音，前後加斜線）。
+單字：${JSON.stringify(words)}
+句子：${JSON.stringify(sentences)}
+只輸出 JSON，不要任何說明：
+{"words":[{"en":"word","ipa":"/wɜːrd/"}],"sentences":[{"en":"The ramp is steep.","ipa":"/ðə ræmp ɪz stiːp/"}]}
+規則：
+1. words 與 sentences 的數量與順序必須和輸入完全一樣（沒有的一段就給空陣列）
+2. en 必須原封不動照抄輸入的文字
+3. IPA 要標重音 ˈ 與次重音 ˌ（若有的話）
+4. 不要翻譯、不要解釋、不要 Markdown`;
+
 /* ============================================================
    8. 主流程
    ============================================================ */
@@ -908,6 +921,51 @@ function fillMissingExamples() {
   });
 }
 
+const ipaKey = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+async function ensureIPA() {
+  if (!labels.length) return;
+  const model = $('textModelSel').value || TEXT_DEFAULT;
+  const wordNeed = [...new Set(labels.filter(l => !l.ipa).map(l => l.en))];
+  const sentNeed = [];
+  const seen = new Set();
+  const addSent = s => { const k = ipaKey(s); if (!k || seen.has(k)) return; seen.add(k); sentNeed.push(String(s).trim()); };
+  labels.forEach(l => { if (l.example && !l.exampleIpa) addSent(l.example); if (l.advanced && !l.advancedIpa) addSent(l.advanced); });
+  if (!wordNeed.length && !sentNeed.length) return;
+
+  const chunk = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };
+  try {
+    for (const part of chunk(wordNeed, 12)) {
+      setStatus('補上單字音標中…');
+      const { text } = await ollamaChat({ model, prompt: PROMPT_IPA(part, []), json: true, timeoutMs: 60000 });
+      const o = extractJSON(text) || {};
+      (o.words || []).forEach(x => {
+        const k = String((x && x.en) || '').toLowerCase().trim();
+        const ipa = normalizeIPA(x && x.ipa);
+        if (!k || !ipa) return;
+        labels.forEach(l => { if (String(l.en).toLowerCase() === k && !l.ipa) l.ipa = ipa; });
+      });
+    }
+    for (const part of chunk(sentNeed, 8)) {
+      setStatus('補上句子音標中…');
+      const { text } = await ollamaChat({ model, prompt: PROMPT_IPA([], part), json: true, timeoutMs: 60000 });
+      const o = extractJSON(text) || {};
+      const arr = Array.isArray(o.sentences) ? o.sentences : [];
+      part.forEach((s, i) => {
+        const hit = arr.find(x => x && ipaKey(x.en) === ipaKey(s)) || arr[i];
+        const ipa = normalizeIPA(hit && hit.ipa);
+        if (!ipa) return;
+        labels.forEach(l => {
+          if (l.example && ipaKey(l.example) === ipaKey(s) && !l.exampleIpa) l.exampleIpa = ipa;
+          if (l.advanced && ipaKey(l.advanced) === ipaKey(s) && !l.advancedIpa) l.advancedIpa = ipa;
+        });
+      });
+    }
+  } catch (e) { console.warn('ensureIPA 失敗', e); }
+  renderCards();
+  renderSentence();
+}
+
 async function generateExamples(words) {
   const src = Array.isArray(words) && words.length ? words : labels;
   const model = $('textModelSel').value || TEXT_DEFAULT;
@@ -932,6 +990,7 @@ async function generateExamples(words) {
     }
   }
   fillMissingExamples();
+  await ensureIPA();
   renderCards();
   if (currentTab === 'flashcards') updateFlashcard();
   setStatus(got ? `✓ 例句完成（模型 ${got}/${list.length}）` : '⚠ 模型沒給例句，已用預設句型', got ? 'ok' : 'err');
@@ -1029,7 +1088,7 @@ function renderCards() {
 function flipCard() { $('flipCard').classList.toggle('flipped'); }
 function updateFlashcard() {
   const card = $('flipCard'); card.classList.remove('flipped');
-  if (!labels.length) { $('fcWord').textContent = '無單字'; $('fcIpa').textContent = ''; $('fcZh').textContent = '請先辨識'; $('fcCounter').textContent = '0 / 0'; $('fcExampleEn').textContent = ''; $('fcExampleZh').textContent = ''; $('fcAdvancedEn').textContent = ''; $('fcAdvancedZh').textContent = ''; return; }
+  if (!labels.length) { $('fcWord').textContent = '無單字'; $('fcIpa').textContent = ''; $('fcZh').textContent = '請先辨識'; $('fcCounter').textContent = '0 / 0'; ['fcExampleEn','fcExampleIpa','fcExampleZh','fcAdvancedEn','fcAdvancedIpa','fcAdvancedZh'].forEach(id => { $(id).textContent = ''; }); return; }
   if (fcIndex >= labels.length) fcIndex = 0;
   const l = labels[fcIndex];
   setTimeout(() => {
@@ -1037,8 +1096,10 @@ function updateFlashcard() {
     $('fcIpa').textContent = l.ipa || '';
     $('fcZh').textContent = l.zh || '';
     $('fcExampleEn').textContent = l.example || '';
+    $('fcExampleIpa').textContent = l.exampleIpa || '';
     $('fcExampleZh').textContent = l.exampleZh || '';
     $('fcAdvancedEn').textContent = l.advanced || '';
+    $('fcAdvancedIpa').textContent = l.advancedIpa || '';
     $('fcAdvancedZh').textContent = l.advancedZh || '';
     $('fcCounter').textContent = (fcIndex+1) + ' / ' + labels.length;
   }, 150);
@@ -1060,6 +1121,16 @@ function startQuiz() {
   renderQuizQuestion();
 }
 
+function quizExplain(lab) {
+  let h = `<b>${esc(lab.en)}</b> <span style="color:#9ca3af;font-family:monospace">${esc(lab.ipa || '')}</span> = ${esc(lab.zh)}`;
+  if (lab.example) {
+    h += `<div style="margin-top:6px;color:#93c5fd">${esc(lab.example)}</div>`;
+    if (lab.exampleIpa) h += `<div style="color:#9ca3af;font-size:12px;font-family:monospace">${esc(lab.exampleIpa)}</div>`;
+    if (lab.exampleZh) h += `<div style="color:#fbbf24;font-size:12px">${esc(lab.exampleZh)}</div>`;
+  }
+  return h;
+}
+
 function buildQuizQuestions() {
   const qs = [];
   const pool = [...labels];
@@ -1068,14 +1139,14 @@ function buildQuizQuestions() {
     const correct = pool[i];
     const others = pool.filter(l => l !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
     const opts = [correct.zh, ...others.map(l => l.zh)].sort(() => Math.random() - 0.5);
-    qs.push({ q: `「${correct.en}」的中文意思是？`, options: opts, answer: opts.indexOf(correct.zh), explain: `${correct.en} ${correct.ipa} = ${correct.zh}` });
+    qs.push({ q: `「${correct.en}」${correct.ipa ? ' ' + correct.ipa : ''} 的中文意思是？`, options: opts, answer: opts.indexOf(correct.zh), explain: quizExplain(correct) });
   }
   // 題型2: 中文選英文
   for (let i = 3; i < Math.min(5, pool.length); i++) {
     const correct = pool[i];
     const others = pool.filter(l => l !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
     const opts = [correct.en, ...others.map(l => l.en)].sort(() => Math.random() - 0.5);
-    qs.push({ q: `「${correct.zh}」的英文是？`, options: opts, answer: opts.indexOf(correct.en), explain: `${correct.zh} = ${correct.en} ${correct.ipa}` });
+    qs.push({ q: `「${correct.zh}」的英文是？`, options: opts, answer: opts.indexOf(correct.en), explain: quizExplain(correct) });
   }
   return qs.sort(() => Math.random() - 0.5);
 }
