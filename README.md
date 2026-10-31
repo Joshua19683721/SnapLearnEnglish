@@ -17,13 +17,16 @@
 - 📘 **進階版例句**（8-12 字）
 - 點擊英文直接發音（en-US TTS）
 
-### 🤖 雙模型支援
+### 🤖 多模型支援
 - **本地 Ollama** - 隱私安全，完全離線
   - 視覺模型：qwen3.5:4b
   - 文字模型：qwen2.5:7b
 - **Groq 雲端 API** - 快速強大
   - qwen/qwen3.8-27b
   - openai/gpt-oss-120b
+- **OpenRouter 免費模型** - 自動抓取 OpenRouter 上所有 `:free` 模型（含可看圖的 VL 模型）
+  - API Key 只存在瀏覽器 `localStorage`，不會上傳到任何伺服器
+  - 清單每 6 小時自動更新，也可按「🔄 更新模型清單」手動刷新
 
 ### 📱 手機友好
 - 響應式設計，手機瀏覽器完美顯示
@@ -57,6 +60,13 @@
 1. 去 [Groq Console](https://console.groq.com/) 申請免費 API Key
 2. 在頁面側邊欄貼上 API Key
 3. 選擇 Groq 模型即可
+
+### 方式四：OpenRouter 免費模型
+1. 去 [OpenRouter](https://openrouter.ai/keys) 申請 API Key（免費）
+2. 在側邊欄「OpenRouter API Key」欄位貼上（存於瀏覽器 localStorage）
+3. 模型選單的「🆓 OpenRouter 免費模型」分組會列出目前所有免費模型
+   - 標示 `👁 可看圖` 的可用於「視覺模型」
+   - 標示 `⚠ 純文字` 的只能當「文字模型」
 
 ## 📋 使用說明
 
