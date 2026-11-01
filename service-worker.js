@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snapsnap-v1';
+const CACHE_NAME = 'snapsnap-v3';
 const ASSETS = [
   './',
   './index.html',

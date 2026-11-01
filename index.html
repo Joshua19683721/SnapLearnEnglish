@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
@@ -64,6 +64,11 @@
   .sentence-box .en { color: #fbbf24; font-weight: 700; cursor: pointer; }
   .sentence-box .ipa { color: #9ca3af; }
   .sentence-box .sent-line { margin-bottom: 4px; }
+  .sent-block { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px dashed #3a3f4b; cursor: pointer; }
+  .sent-block:last-of-type { border-bottom: none; }
+  .sent-no { flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+  .sent-body { flex: 1; min-width: 0; }
+  .sentence-box .zh { color: #d1d5db; font-size: 12px; margin-top: 2px; }
   .gphrase { position: relative; border-bottom: 1px dashed #fbbf24; cursor: help; padding: 0 1px; }
   .gphrase .tooltip { display: none; position: absolute; bottom: 130%; left: 0; background: #111827; color: #e5e7eb; border: 1px solid #fbbf24; border-radius: 8px; padding: 10px 12px; width: 300px; font-size: 12px; line-height: 1.6; z-index: 99; box-shadow: 0 6px 18px rgba(0,0,0,.6); font-weight: 400; white-space: normal; }
   .gphrase .tooltip .tt-title { color: #fbbf24; font-weight: 700; display: block; margin-bottom: 4px; }
@@ -130,8 +135,57 @@
   .grammar-item .g-title { color: #fbbf24; font-weight: 700; margin-bottom: 4px; }
   .grammar-item .g-phrase { color: #93c5fd; font-size: 12px; margin-bottom: 4px; }
 
+  /* === View 5: Chunks / View 6: Check === */
+  #view-chunks, #view-check { flex-direction: column; }
+  .page { padding: 24px; width: 100%; max-width: 1120px; margin: 0 auto; flex: 1; }
+  .page h2 { font-size: 20px; margin-bottom: 4px; }
+  .page .sub { color: #9ca3af; font-size: 13px; margin-bottom: 18px; line-height: 1.6; }
+  .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .stat { background: #2a2e37; border: 1px solid #3a3f4b; border-radius: 10px; padding: 10px 14px; min-width: 104px; }
+  .stat b { display: block; font-size: 20px; color: #60a5fa; line-height: 1.2; }
+  .stat span { font-size: 11px; color: #9ca3af; }
+  .chunk-group { margin-bottom: 18px; }
+  .chunk-group h3 { font-size: 13px; color: #fbbf24; margin-bottom: 8px; letter-spacing: .5px; }
+  .chunk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+  .chunk { background: #2a2e37; border: 1px solid #3a3f4b; border-radius: 8px; padding: 8px 10px; cursor: pointer; transition: all .15s; }
+  .chunk:hover { border-color: #3b82f6; }
+  .chunk.used { border-color: #10b981; background: #10b98114; }
+  .chunk .c-en { font-size: 13px; font-weight: 700; color: #e5e7eb; }
+  .chunk .c-zh { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .chunk .c-mark { float: right; color: #34d399; font-size: 12px; }
+  .cchip { display: inline-block; font-size: 10px; color: #a7f3d0; background: #065f4633; border: 1px solid #065f46; border-radius: 10px; padding: 1px 7px; margin: 4px 4px 0 0; }
+  .report { margin-top: 18px; border: 1px solid #3a3f4b; border-radius: 12px; overflow: hidden; }
+  .report-head { background: #2a2e37; padding: 14px 16px; font-weight: 700; font-size: 15px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .report-head .badge { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
+  .badge.pass { background: #065f46; color: #6ee7b7; }
+  .badge.fail { background: #7f1d1d; color: #fca5a5; }
+  .report-row { display: flex; gap: 10px; padding: 10px 16px; border-top: 1px solid #2f3540; font-size: 13px; line-height: 1.55; align-items: flex-start; }
+  .report-row .ico { flex-shrink: 0; font-weight: 700; }
+  .report-row.ok .ico { color: #34d399; }
+  .report-row.no .ico { color: #f87171; }
+  .report-row .txt b { color: #e5e7eb; font-weight: 700; }
+  .report-row .txt span { color: #9ca3af; display: block; font-size: 12px; margin-top: 2px; }
+
+  /* === Toast / 非阻斷式錯誤提示 === */
+  .toast-wrap { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 9999; pointer-events: none; align-items: center; }
+  .toast { background: #2a2e37; border: 1px solid #3a3f4b; border-left: 4px solid #3b82f6; color: #e8e8e8; padding: 10px 16px; border-radius: 8px; font-size: 13px; box-shadow: 0 8px 24px #0008; max-width: min(92vw, 520px); line-height: 1.5; animation: toastIn .2s ease; }
+  .toast.err { border-left-color: #ef4444; }
+  .toast.ok { border-left-color: #10b981; }
+  .toast.warn { border-left-color: #f59e0b; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .err-banner { display: none; margin: 10px 0 4px; padding: 10px 12px; border-radius: 8px; background: #7f1d1d22; border: 1px solid #7f1d1d; color: #fca5a5; font-size: 12px; line-height: 1.6; }
+  .err-banner b { color: #fecaca; display: block; margin-bottom: 4px; font-size: 13px; }
+  .err-banner .row { display: flex; gap: 8px; margin-top: 8px; }
+  .chain-hint { font-size: 11px; color: #6b7280; line-height: 1.7; margin-top: -2px; }
+  .chain-hint b { color: #9ca3af; }
+
   /* === Mobile Responsive === */
   @media (max-width: 768px) {
+    .page { padding: 14px; }
+    .chunk-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .chunk .c-en { font-size: 12px; }
+    .stat { padding: 8px 10px; min-width: 88px; }
+    .stat b { font-size: 17px; }
     header { padding: 6px 10px; gap: 6px; }
     header h1 { font-size: 14px; margin: 0; }
     .btn { padding: 7px 10px; font-size: 13px; min-height: 36px; }
@@ -186,6 +240,8 @@
   <button class="tab-btn" data-tab="cards" onclick="switchTab('cards')">📇 單字圖卡</button>
   <button class="tab-btn" data-tab="flashcards" onclick="switchTab('flashcards')">🎴 翻卡複習</button>
   <button class="tab-btn" data-tab="quiz" onclick="switchTab('quiz')">✏️ 隨堂小測</button>
+  <button class="tab-btn" data-tab="chunks" onclick="switchTab('chunks')">🧩 常用語塊</button>
+  <button class="tab-btn" data-tab="check" onclick="switchTab('check')">📊 學習檢核</button>
 </nav>
 
 <div class="main">
@@ -209,10 +265,16 @@
         <label>Groq API Key（雲端模型用）</label>
         <input type="password" id="groqKey" placeholder="gsk_...">
       </div>
+      <div class="field" id="deepseekKeyField" style="display:none">
+        <label>DeepSeek API Key（雲端模型用）</label>
+        <input type="password" id="deepseekKey" placeholder="sk_...">
+      </div>
       <div class="field">
         <label>標註數量</label>
         <input type="number" id="targetCount" min="1" max="20" step="1" value="10">
       </div>
+      <div class="chain-hint" id="chainHint">優先順序：<b>Groq</b> → <b>DeepSeek Flash</b> → 本機 Ollama，失敗會自動接手，不會中斷。</div>
+      <div class="err-banner" id="errBanner"></div>
 
       <h2>標籤編輯</h2>
       <div id="editor">
@@ -310,6 +372,27 @@
     </div>
   </div>
 
+  <!-- ============ View 5: Chunks ============ -->
+  <div id="view-chunks" class="view">
+    <div class="page">
+      <h2>🧩 108 課綱常用語塊</h2>
+      <p class="sub">A2–B1 最常考的片語、介系詞組與高頻搭配。點一下即可發音；目前例句中用到的語塊會亮綠燈 ✓。</p>
+      <div id="chunkStats"></div>
+      <div id="chunkList"></div>
+    </div>
+  </div>
+
+  <!-- ============ View 6: Check ============ -->
+  <div id="view-check" class="view">
+    <div class="page">
+      <h2>📊 學習檢核</h2>
+      <p class="sub">不連網也能跑：檢查句型庫、語塊、核心字彙，以及「單字 → 例句 → 圖卡 → 測驗」整條流程。</p>
+      <div id="checkStats"></div>
+      <button class="btn" onclick="runSelfTest()" style="font-size:14px;padding:10px 18px">▶ 執行自我檢查</button>
+      <div id="checkReport"><div class="hint">按上面按鈕跑一次完整流程，約 1 秒完成。</div></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -374,8 +457,41 @@ let quizQuestions = [];
 const VLM_DEFAULT = 'qwen3.5:4b';
 const TEXT_DEFAULT = 'qwen2.5:7b';
 const OLLAMA = 'http://127.0.0.1:11434';
+const GROQ_MODELS = ['groq:qwen/qwen3.8-27b', 'groq:openai/gpt-oss-120b'];
+const GROQ_DEFAULT = 'groq:qwen/qwen3.8-27b';
+const DS_MODEL = 'deepseek:deepseek-flash';
+let LOCAL_MODELS = [];
 
 function setStatus(msg, kind) { const el = $('status'); el.textContent = msg || '待命'; el.className = kind || ''; }
+
+/* --- 非阻斷式提示（取代 alert，不擋操作） --- */
+function toast(msg, type, ms) {
+  let wrap = document.getElementById('toastWrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'toastWrap';
+    wrap.className = 'toast-wrap';
+    document.body.appendChild(wrap);
+  }
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type || '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity .25s';
+    el.style.opacity = '0';
+    setTimeout(() => { if (el.remove) el.remove(); else if (el.parentNode) el.parentNode.removeChild(el); }, 280);
+  }, ms || 3600);
+}
+function showErrorBanner(title, detail) {
+  const el = $('errBanner');
+  if (!el) { toast(title, 'err', 5000); return; }
+  el.innerHTML = `<b>${esc(title)}</b>${esc(detail || '')}
+    <div class="row"><button class="btn sm" onclick="hideErrorBanner();autoLabel()">重試辨識</button>
+    <button class="btn sm gray" onclick="hideErrorBanner()">關閉</button></div>`;
+  el.style.display = 'block';
+}
+function hideErrorBanner() { const el = $('errBanner'); if (el) { el.style.display = 'none'; el.innerHTML = ''; } }
 
 /* ============================================================
    2. Tab 切換
@@ -389,6 +505,8 @@ function switchTab(tab) {
   if (tab === 'cards') renderCards();
   if (tab === 'flashcards') updateFlashcard();
   if (tab === 'quiz') { if (!quizQuestions.length) startQuiz(); }
+  if (tab === 'chunks') renderChunks();
+  if (tab === 'check') renderCheck();
 }
 
 /* ============================================================
@@ -425,7 +543,7 @@ function handleFile(e) {
 }
 
 img.addEventListener('dblclick', e => {
-  if (!img.src) { alert('請先選擇圖片'); return; }
+  if (!img.src) { toast('請先選擇圖片', 'err'); return; }
   const r = stage.getBoundingClientRect();
   addLabel((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height, 'word', '/wɜːrd/', '單字');
 });
@@ -433,12 +551,23 @@ img.addEventListener('dblclick', e => {
 /* ============================================================
    4. 標籤
    ============================================================ */
-function addLabel(x, y, en, ipa, zh, free) {
-  ipa = ipa || ''; zh = zh || '';
+function addLabel(x, y, en, ipa, zh, free, extras) {
+  ipa = ipa || ''; zh = zh || ''; extras = extras || {};
   const el = document.createElement('div');
   el.className = 'label' + (free ? ' free' : '');
   stage.appendChild(el);
-  const lab = { x: clamp01(Number(x) || 0.5), y: clamp01(Number(y) || 0.5), en, ipa, zh, free: !!free, sus: false, el };
+  const lab = {
+    x: clamp01(Number(x) || 0.5),
+    y: clamp01(Number(y) || 0.5),
+    en, ipa, zh,
+    free: !!free, sus: false, el,
+    example: extras.example || '',
+    exampleIpa: extras.exampleIpa || '',
+    exampleZh: extras.exampleZh || '',
+    advanced: extras.advanced || '',
+    advancedIpa: extras.advancedIpa || '',
+    advancedZh: extras.advancedZh || ''
+  };
   el.innerHTML = labelHTML(lab);
   labels.push(lab);
   positionEl(lab);
@@ -496,31 +625,107 @@ const LS = { get(k) { try { return localStorage.getItem(k); } catch(e) { return 
 async function listModels() { try { const r = await fetch(OLLAMA + '/api/tags'); if (!r.ok) return []; const d = await r.json(); return (d.models || []).map(m => m.name).sort(); } catch(e) { return []; } }
 async function fillModelSelects() {
   const names = await listModels();
+  LOCAL_MODELS = names;
   const vlm = $('modelSel'), txt = $('textModelSel');
-  const savedV = LS.get('kw.vlm') || VLM_DEFAULT, savedT = LS.get('kw.text') || TEXT_DEFAULT;
-  // 本地模型 + Groq 雲端模型
-  const groqModels = [
-    'groq:qwen/qwen3.8-27b',
-    'groq:openai/gpt-oss-120b'
-  ];
-  const build = (sel, saved, fb) => {
-    const all = [...names, ...groqModels];
+  const hasGroq = !!LS.get('kw.groqKey');
+  const savedV = LS.get('kw.vlm'), savedT = LS.get('kw.text');
+  const all = [...GROQ_MODELS, ...names, DS_MODEL].filter((m, i, a) => a.indexOf(m) === i);
+  const build = (sel, saved, localFb) => {
     sel.innerHTML = all.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
-    sel.value = all.includes(saved) ? saved : (all.includes(fb) ? fb : all[0]);
+    // 沒存過偏好時：有 Groq Key 就以 Groq 優先，其次本機
+    const want = saved && all.includes(saved) ? saved
+      : (hasGroq ? GROQ_DEFAULT : (all.includes(localFb) ? localFb : all[0]));
+    sel.value = want;
   };
   build(vlm, savedV, VLM_DEFAULT); build(txt, savedT, TEXT_DEFAULT);
-  const toggleGroqKey = () => {
-    const show = vlm.value.startsWith('groq:') || txt.value.startsWith('groq:');
-    $('groqKeyField').style.display = show ? 'block' : 'none';
+  const toggleKeys = () => {
+    const showGroq = vlm.value.startsWith('groq:') || txt.value.startsWith('groq:');
+    const showDs = vlm.value.startsWith('deepseek:') || txt.value.startsWith('deepseek:');
+    $('groqKeyField').style.display = showGroq ? 'block' : 'none';
+    $('deepseekKeyField').style.display = showDs ? 'block' : 'none';
   };
-  vlm.addEventListener('change', () => { LS.set('kw.vlm', vlm.value); toggleGroqKey(); });
-  txt.addEventListener('change', () => { LS.set('kw.text', txt.value); toggleGroqKey(); });
-  toggleGroqKey();
-  // API key 欄位
+  vlm.addEventListener('change', () => { LS.set('kw.vlm', vlm.value); toggleKeys(); MODEL_COOLDOWN.clear(); updateChainHint(); });
+  txt.addEventListener('change', () => { LS.set('kw.text', txt.value); toggleKeys(); });
+  toggleKeys();
+  // Groq API key
   const savedKey = LS.get('kw.groqKey') || '';
   $('groqKey').value = savedKey;
-  $('groqKey').addEventListener('input', (e) => LS.set('kw.groqKey', e.target.value));
-  if (!names.length) setStatus('⚠ Ollama 沒回應（可用 Groq 雲端模型）', 'err');
+  $('groqKey').addEventListener('input', (e) => { LS.set('kw.groqKey', e.target.value); MODEL_COOLDOWN.clear(); updateChainHint(); });
+  // DeepSeek API key
+  const savedDsKey = LS.get('kw.deepseekKey') || '';
+  $('deepseekKey').value = savedDsKey;
+  $('deepseekKey').addEventListener('input', (e) => { LS.set('kw.deepseekKey', e.target.value); MODEL_COOLDOWN.clear(); updateChainHint(); });
+  updateChainHint();
+  if (!names.length) setStatus('⚠ Ollama 沒回應（雲端模型仍可用）', '');
+}
+
+function shortModel(m) { return String(m || '').replace(/^(groq|deepseek):/, ''); }
+function modelLabel(m) {
+  const s = String(m || '');
+  if (s.startsWith('groq:')) return 'Groq ' + shortModel(s).replace(/^.*\//, '');
+  if (s.startsWith('deepseek:')) return 'DeepSeek Flash';
+  return shortModel(s);
+}
+function briefErr(e) {
+  const s = String((e && e.message) || e || '未知錯誤');
+  if (/429/.test(s)) return '429 速率限制';
+  if (/40[13]/.test(s)) return '金鑰無效';
+  if (/abort|逾時|timeout/i.test(s)) return '逾時';
+  if (/Failed to fetch|NetworkError|Load failed/i.test(s)) return '連線失敗';
+  if (/API Key/.test(s)) return '未設定金鑰';
+  if (/HTTP 5\d\d/.test(s)) return '服務暫時不可用';
+  if (/HTTP 4\d\d/.test(s)) return '請求被拒絕（' + (s.match(/HTTP (\d{3})/) || [])[1] + '）';
+  return s.length > 40 ? s.slice(0, 40) + '…' : s;
+}
+// 模型接手順序：主要 → 其他 Groq → DeepSeek Flash → 本機 Ollama
+const NO_VISION = new Set(['groq:openai/gpt-oss-120b']);
+function buildChain(primary, needVision) {
+  const out = [];
+  const push = m => {
+    if (!m || out.indexOf(m) >= 0) return;
+    if (needVision && NO_VISION.has(m)) return;
+    out.push(m);
+  };
+  push(primary);
+  if (LS.get('kw.groqKey')) GROQ_MODELS.forEach(push);
+  if (LS.get('kw.deepseekKey')) push(DS_MODEL);
+  LOCAL_MODELS.slice(0, 2).forEach(push);
+  if (out.length === 1 && String(primary).startsWith('groq:')) push(DS_MODEL);
+  return out;
+}
+function updateChainHint() {
+  const el = $('chainHint');
+  if (!el) return;
+  const chain = buildChain($('modelSel').value || VLM_DEFAULT, true);
+  el.innerHTML = '優先順序：' + chain.map(m => '<b>' + esc(modelLabel(m)) + '</b>').join(' → ') + '，失敗自動接手、不會中斷。';
+}
+// 任何一次呼叫都走「自動接手」鏈，錯誤不彈窗
+const MODEL_COOLDOWN = new Map();
+function modelCooling(m) { const t = MODEL_COOLDOWN.get(m); return !!t && Date.now() - t < 45000; }
+async function chatSmart(opts) {
+  const chain = buildChain(opts.model, !!opts.image);
+  const fresh = chain.filter(m => !modelCooling(m));
+  const list = fresh.length ? fresh : chain;   // 全部都在冷卻時，還是試一輪
+  let lastErr = null;
+  for (let i = 0; i < list.length; i++) {
+    const m = list[i];
+    try {
+      const r = await ollamaChat({ model: m, prompt: opts.prompt, image: opts.image, json: opts.json, timeoutMs: opts.timeoutMs });
+      r.usedModel = m;
+      r.fellBack = m !== opts.model;
+      return r;
+    } catch (e) {
+      lastErr = e;
+      // 429 / 金鑰失效：冷卻一段時間，後續呼叫直接跳過
+      if (e && (e.status === 429 || e.status === 401 || e.status === 403)) MODEL_COOLDOWN.set(m, Date.now());
+      const next = list[i + 1];
+      if (next) {
+        setStatus(`⚠ ${modelLabel(m)}：${briefErr(e)} → 改用 ${modelLabel(next)}`, '');
+        toast(`${modelLabel(m)} 失敗（${briefErr(e)}），已改用 ${modelLabel(next)}`, 'warn', 2800);
+      }
+    }
+  }
+  throw lastErr || new Error('沒有可用的模型');
 }
 
 async function ollamaChat({ model, prompt, image, json, timeoutMs }) {
@@ -541,14 +746,54 @@ async function ollamaChat({ model, prompt, image, json, timeoutMs }) {
           model: groqModel,
           messages: [{ role: 'user', content: content }],
           temperature: 0.1,
-          max_tokens: 1400,
-          response_format: json ? { type: 'json_object' } : undefined
+          max_tokens: 2000
         }),
         signal: ctl.signal
       });
-      if (!r.ok) { const t = await r.text(); throw new Error('Groq HTTP ' + r.status + ' ' + t.slice(0, 200)); }
+      if (!r.ok) {
+        const t = await r.text();
+        if (r.status === 429) {
+          const retryAfter = r.headers.get('retry-after') || 5;
+          const err = new Error(`Groq 429 速率限制（${retryAfter}s）`);
+          err.status = 429;
+          throw err;
+        }
+        const err = new Error('Groq HTTP ' + r.status + ' ' + t.slice(0, 200));
+        err.status = r.status;
+        throw err;
+      }
       const d = await r.json();
-      return { text: d.choices[0].message.content, raw: d };
+      const msg = d.choices?.[0]?.message || {};
+      const text = msg.content || msg.reasoning_content || '';
+      return { text, raw: d };
+    } finally { clearTimeout(timer); }
+  }
+  // DeepSeek 雲端模型
+  if (model.startsWith('deepseek:')) {
+    const apiKey = LS.get('kw.deepseekKey') || '';
+    if (!apiKey) throw new Error('請先輸入 DeepSeek API Key');
+    const dsModel = model.slice(9);
+    const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), timeoutMs || 120000);
+    try {
+      const content = (image && dsModel === 'deepseek-flash')
+        ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + image, detail: 'low' } }]
+        : prompt;
+      const r = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({
+          model: dsModel,
+          messages: [{ role: 'user', content: content }],
+          temperature: 0.1,
+          max_tokens: 2000
+        }),
+        signal: ctl.signal
+      });
+      if (!r.ok) { const t = await r.text(); const err = new Error('DeepSeek HTTP ' + r.status + ' ' + t.slice(0, 200)); err.status = r.status; throw err; }
+      const d = await r.json();
+      const msg = d.choices?.[0]?.message || {};
+      const text = msg.content || msg.reasoning_content || '';
+      return { text, raw: d };
     } finally { clearTimeout(timer); }
   }
   // 本地 Ollama
@@ -623,39 +868,42 @@ const PROMPT_MORE = (have, need) => `看這張圖。已經標過：${JSON.string
 const PROMPT_RETRY = n => `看圖，列出圖中看得見的東西。只輸出 JSON。{"labels":[{"en":"window","ipa":"/ˈwɪndoʊ/","zh":"窗戶","x":0.4,"y":0.5}]}\n${n} 個，x、y 0到1。en 小寫英文，zh 繁體中文。`;
 const PROMPT_VERIFY = words => `看這張圖，判斷清單裡每個英文單字指的東西在圖中有沒有出現。清單：${JSON.stringify(words)}。只輸出 JSON：{"check":[{"en":"字","seen":true}]}`;
 const PROMPT_ONE = `這張小圖中間的東西，英文單字是什麼？只輸出 JSON：{"en":"","ipa":"","zh":""}`;
-const PROMPT_SENT = (pairs, missing) => `用下面全部 ${pairs.length} 個英文單字，寫 2 到 3 句英文描述這張圖。只輸出 JSON：{"sentences":[{"en":"","zh":"","ipa":""}]}
-規則：1. 每一個字都必須至少出現一次。2. 總共 2-3 句每句 6-14 字。3. 基礎句型不要用分詞構句。4. 完整正確英文。5. 句子連貫。6. en 不要放音標。7. 每句給 ipa 和 zh 繁體中文。
+const PROMPT_SENT = (pairs, missing) => `用下面全部 ${pairs.length} 個英文單字，寫 2 到 3 句看圖描述。只輸出 JSON：{"sentences":[{"en":"","zh":"","ipa":""}]}
+規則：
+1. 每一個字都必須至少出現一次。
+2. 每句 8-16 字，A2-B1 程度，不要用分詞構句。
+3. 每句開頭都要不一樣（There is/are、主詞開頭、介系詞片語開頭…），禁止每句都用 "in the picture"、"I can see"、"This picture shows"。
+4. 不要提到 picture、photo、image。
+5. 至少兩句各含一個常用語塊（in front of / next to / on the left / at the same time / take care of / a lot of / look forward to）。
+6. 句子要連貫，像在描述一個真實場景。
+7. 每句給 ipa（KK 音標）和 zh（繁體中文）。
 單字：${pairs.join('、')}${missing ? '\n漏掉的：' + missing.join(', ') : ''}`;
 const PROMPT_GRAMMAR = `你是英文文法老師。下面是一段看圖描述的英文。請拆解句型，用繁體中文說明。只輸出 JSON。
 句子：`;
 const PROMPT_GRAMMAR_TAIL = `
 輸出格式：{"structure":[{"title":"結構名稱","phrase":"從原句摘出的連續英文片段","detail":"2-4 句中文說明"}],"highlights":["文法亮點一","文法亮點二"]}`;
 
-const PROMPT_EXAMPLES = (words, sceneDesc) => `你是英文老師。下面是一張圖片的場景描述，以及圖中出現的 ${words.length} 個英文單字。請為每個單字寫兩個符合這個圖片場景的英文例句：
-- 基礎版：5-8 個字，簡單清楚，適合初學者
-- 進階版：8-12 個字，稍微複雜一點，適合中級
-場景：${sceneDesc}
-單字清單：${words.map(w => w.en + '（' + w.zh + '）').join('、')}
+const PROMPT_EXAMPLES = (words, sceneDesc) => `你是 108 課綱 A2-B1 英文老師。場景：${sceneDesc}
+單字：${words.map(w => w.en + '=' + w.zh).join(', ')}
 
-只輸出 JSON，不要其他文字：
-{"examples":[{"en":"word","basic":"The cat sits on the mat.","basicIpa":"/ðə kæt sɪts ɑːn ðə mæt/","basicZh":"貓坐在墊子上。","advanced":"The black cat sits quietly on the soft mat.","advancedIpa":"/ðə blæk kæt sɪts ˈkwaɪətli ɑːn ðə sɔːft mæt/","advancedZh":"黑貓安靜地坐在柔軟的墊子上。"}]}
+請為每個單字寫 2 個例句：
+- basic：A2 程度，6-10 字，用最常見的基本句型（There is/are、S+V+O、can、want to、be+V-ing、過去式、祈使句…）。
+- advanced：B1 程度，10-16 字，用進階句型（Although、so...that、not only...but also、If、which、have+p.p.、in order to、even though、as soon as、the more...the more…）。
 
 規則：
-1. 每個單字都要有一筆，en 必須是清單裡的原字
-2. basic 是 5-8 字的簡單英文句子，一定要包含這個單字
-3. basicIpa 是基礎版的 KK 音標，前後加斜線
-4. basicZh 是基礎版的繁體中文翻譯（台灣用語）
-5. advanced 是 8-12 字的進階英文句子，一定要包含這個單字
-6. advancedIpa 是進階版的 KK 音標，前後加斜線
-7. advancedZh 是進階版的繁體中文翻譯
-8. 兩個例句都要符合圖片場景，不要隨便寫`;
+1. 每句都要自然用到該單字，並至少包含一個常用語塊（take care of / in front of / look forward to / make a decision / pay attention to / as soon as / a lot of / next to / belong to / be interested in）。
+2. 每個單字的句型都要不一樣，禁止每句都用 "in the picture"、"I can see..."、"is clearly visible"。
+3. 句子要跟場景有關，但不要提到 picture、photo、image。
+4. 只輸出 JSON，不要其他文字。
+{"examples":[{"en":"word","basic":"...","basicZh":"...","advanced":"...","advancedZh":"..."}]}`;
 
 /* ============================================================
    8. 主流程
    ============================================================ */
 async function autoLabel() {
-  if (!img.src || !img.naturalWidth) { alert('請先選擇圖片'); return; }
+  if (!img.src || !img.naturalWidth) { toast('請先選擇圖片', 'err'); return; }
   if (busy) return; busy = true;
+  hideErrorBanner();
   const btn = $('autoBtn'); btn.disabled = true; btn.textContent = '🤖 辨識中...';
   const model = $('modelSel').value || VLM_DEFAULT;
   const target = Math.max(1, Math.min(20, parseInt($('targetCount').value, 10) || 10));
@@ -663,22 +911,45 @@ async function autoLabel() {
     await img.decode().catch(() => {});
     const thumb = makeThumb(1024);
     setStatus('辨識中…');
-    let obj = null, lastErr = '';
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    let obj = null, lastErr = '', usedModel = '';
+    // 第一次：主模型（失敗自動接手，不中斷）
+    try {
+      const r = await chatSmart({ model, prompt: PROMPT_MAIN(target), image: thumb, json: true, timeoutMs: 150000 });
+      usedModel = r.usedModel || model;
+      const text = r.text || '';
+      if (!text.trim()) lastErr = '模型回傳空內容';
+      else {
+        const parsed = extractJSON(text);
+        if (parsed) obj = parsed; else lastErr = '模型沒有回傳可用 JSON';
+      }
+    } catch (e) { lastErr = e.message; }
+
+    // 第二次：換較簡短的提示再走一次接手鏈
+    if (!obj) {
       try {
-        const { text } = await ollamaChat({ model, prompt: attempt === 1 ? PROMPT_MAIN(target) : PROMPT_RETRY(target), image: thumb, json: true, timeoutMs: attempt === 1 ? 150000 : 90000 });
-        if (!text || !text.trim()) { lastErr = '模型回傳空內容'; continue; }
-        const parsed = extractJSON(text); if (!parsed) { lastErr = '模型沒有回傳可用 JSON'; continue; }
-        obj = parsed; break;
-      } catch (e) { lastErr = e.message; }
+        const r2 = await chatSmart({ model, prompt: PROMPT_RETRY(target), image: thumb, json: true, timeoutMs: 90000 });
+        usedModel = r2.usedModel || usedModel;
+        const p2 = extractJSON(r2.text || '');
+        if (p2) obj = p2; else lastErr = '重試仍沒有可用 JSON';
+      } catch (e2) { lastErr = e2.message; }
     }
-    if (!obj) throw new Error(lastErr || '辨識失敗');
+
+    if (!obj) {
+      // 完全不中斷：顯示可關閉的提示，App 仍可繼續用
+      const keyIssue = /API Key|金鑰|未設定/.test(lastErr || '');
+      showErrorBanner('這次沒能辨識出單字',
+        keyIssue ? '還沒有可用的 API Key，請先在右側輸入 Groq 或 DeepSeek 金鑰，再按「重試辨識」。'
+                 : `${briefErr({ message: lastErr })}。可以按「重試辨識」再試一次。`);
+      setStatus('✗ ' + briefErr({ message: lastErr }), 'err');
+      toast('辨識失敗，已保留目前畫面；可再按一次自動辨識', 'err', 4200);
+      return;
+    }
     let cleaned = (Array.isArray(obj.labels) ? obj.labels : []).map(cleanLabel).filter(Boolean);
     cleaned = dedupeAndSpread(cleaned).slice(0, target);
     if (!cleaned.length) throw new Error('模型沒有給出有效單字');
     for (let round = 0; round < 2 && cleaned.length < target; round++) {
       try {
-        const { text } = await ollamaChat({ model, prompt: PROMPT_MORE(cleaned.map(l => l.en), target - cleaned.length), image: thumb, json: true, timeoutMs: 90000 });
+        const { text } = await chatSmart({ model, prompt: PROMPT_MORE(cleaned.map(l => l.en), target - cleaned.length), image: thumb, json: true, timeoutMs: 90000 });
         const o2 = extractJSON(text) || {};
         const more = (Array.isArray(o2.labels) ? o2.labels : []).map(cleanLabel).filter(Boolean);
         const have = new Set(cleaned.map(l => l.en));
@@ -688,23 +959,32 @@ async function autoLabel() {
     }
     cleaned = cleaned.slice(0, target);
     labels.forEach(l => l.el.remove()); labels = []; selected = null;
-    cleaned.forEach(l => addLabel(l.x, l.y, l.en, l.ipa, l.zh, l.free));
-    sentence = normalizeSentenceObj(obj.sentence) || fallbackSentence(cleaned);
+    cleaned.forEach(l => addLabel(l.x, l.y, l.en, l.ipa, l.zh, l.free, {
+      example: l.example, exampleIpa: l.exampleIpa, exampleZh: l.exampleZh
+    }));
+    const llmSent = normalizeSentenceObj(obj.sentence);
+    sentence = (llmSent && !BAD_TEMPLATE.test(llmSent.en)) ? llmSent : fallbackSentence(cleaned);
     grammar = null; renderEditor(); renderSentence(); renderGrammar();
-    setStatus(`✓ ${cleaned.length} 個標籤，生成例句中…`, 'ok');
+    const who = usedModel && usedModel !== model ? `（${modelLabel(usedModel)} 接手）` : '';
+    setStatus(`✓ ${cleaned.length} 個標籤${who}，生成句子與例句中…`, 'ok');
+    if (usedModel && usedModel !== model) toast(`已由 ${modelLabel(usedModel)} 接手完成辨識`, 'ok', 2600);
 
-    // 用文字模型為每個單字生成符合圖片情境的例句
+    // 先 await 造句，避免與例句生成搶同一個模型
+    await composeSentence();
+    await buildGrammar();
+    // 再生成例句（完成後才恢復按鈕，狀態才準）
     await generateExamples(cleaned);
-
-    await composeSentence(); buildGrammar();
     renderCards();
   } catch (e) {
     setStatus('✗ ' + e.message, 'err');
-    alert('自動辨識失敗：' + e.message + '\n\n請確認 Ollama 服務在 127.0.0.1:11434 運作中。');
+    showErrorBanner('辨識中斷', briefErr(e));
   } finally { busy = false; btn.disabled = false; btn.textContent = '🤖 自動辨識'; }
 }
 
-function fallbackSentence(list) { const w = list.slice(0, 3).map(l => 'a ' + l.en); return joinSentence([{ en: 'The picture shows ' + (w.length > 1 ? w.slice(0,-1).join(', ') + ' and ' + w[w.length-1] : w[0] || 'a scene') + '.', ipa: '', zh: '（自動產生）' }]); }
+function fallbackSentence(list) {
+  const fb = buildDescriptionSentences(list);
+  return fb || joinSentence([{ en: 'There is a lot to see here.', ipa: '', zh: '這裡有很多東西可看。' }]);
+}
 function joinSentence(lines) { const ls = lines.filter(l => l && l.en); return { lines: ls, en: ls.map(l => l.en).join(' '), ipa: ls.map(l => l.ipa).filter(Boolean).join(' '), zh: ls.map(l => l.zh).filter(Boolean).join('') }; }
 function normalizeSentenceObj(o) {
   if (!o || typeof o !== 'object') return null;
@@ -726,27 +1006,31 @@ async function composeSentence() {
   const pairs = labels.map(l => l.en + '（' + (l.zh||'') + '）');
   setStatus('造句中…');
   let best = null, bestScore = -1;
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const { text } = await ollamaChat({ model, prompt: PROMPT_SENT(pairs, best ? best.cover.missing : null), json: true, timeoutMs: 90000 });
-      const o = extractJSON(text); if (!o) continue;
+      const r = await chatSmart({ model, prompt: PROMPT_SENT(pairs, best ? best.cover.missing : null), json: true, timeoutMs: 90000 });
+      const o = extractJSON(r.text); if (!o) continue;
       const cand = normalizeSentenceObj(o); if (!cand) continue;
       cand.lines = cand.lines.slice(0, 3); cand.en = cand.lines.map(l => l.en).join(' ');
       if (!cand.lines.every(l => l.en && l.en.length > 8)) continue;
+      if (BAD_TEMPLATE.test(cand.en)) continue;
       cand.cover = coverage(cand.en, words);
       const score = cand.cover.used * 10 + (cand.lines.length >= 2 ? 3 : 0);
       if (score > bestScore) { best = cand; bestScore = score; }
       if (cand.cover.used === cand.cover.total && cand.lines.length >= 2) break;
     } catch(e) { break; }
   }
-  if (best) { sentence = best; renderSentence(); }
+  const fb = buildDescriptionSentences(labels);
+  const fbScore = fb ? fb.cover.used * 10 + (fb.lines.length >= 2 ? 3 : 0) : -1;
+  sentence = (fb && (!best || fbScore > bestScore)) ? fb : best;
+  renderSentence();
 }
 
 async function buildGrammar() {
   if (!sentence || !sentence.en) return;
   const model = $('textModelSel').value || TEXT_DEFAULT;
   try {
-    const { text } = await ollamaChat({ model, prompt: PROMPT_GRAMMAR + sentence.en + PROMPT_GRAMMAR_TAIL, json: true, timeoutMs: 90000 });
+    const { text } = await chatSmart({ model, prompt: PROMPT_GRAMMAR + sentence.en + PROMPT_GRAMMAR_TAIL, json: true, timeoutMs: 90000 });
     const g = extractJSON(text);
     if (g && (g.structure || g.highlights)) {
       grammar = { structure: (g.structure || []).map(x => ({ title: toTrad(x.title), phrase: String(x.phrase||'').trim(), detail: toTrad(x.detail) })).filter(x => x.detail), highlights: (g.highlights || []).map(toTrad).filter(Boolean) };
@@ -759,65 +1043,78 @@ async function buildGrammar() {
 async function generateExamples(words) {
   const model = $('textModelSel').value || TEXT_DEFAULT;
   const sceneDesc = sentence ? sentence.en : 'A scene from the photo';
+  const prompt = PROMPT_EXAMPLES(words, sceneDesc);
+  let o = null, lastErr = '', lastText = '', usedModel = '';
   try {
-    setStatus('生成單字例句中…');
-    const { text } = await ollamaChat({
-      model,
-      prompt: PROMPT_EXAMPLES(words, sceneDesc),
-      json: true, timeoutMs: 90000
-    });
-    const o = extractJSON(text);
-    if (!o || !o.examples) return;
-    // 建立映射：en → example
-    const map = {};
-    o.examples.forEach(e => {
-      const en = String(e.en || '').toLowerCase().trim();
-      if (en) map[en] = {
-        basic: String(e.basic || e.example || '').trim(),
-        basicIpa: normalizeIPA(e.basicIpa || e.exampleIpa || ''),
-        basicZh: toTrad(String(e.basicZh || e.exampleZh || '').trim()),
-        advanced: String(e.advanced || '').trim(),
-        advancedIpa: normalizeIPA(e.advancedIpa || ''),
-        advancedZh: toTrad(String(e.advancedZh || '').trim())
-      };
-    });
-    // 更新到 labels
-    labels.forEach(l => {
-      const hit = map[l.en.toLowerCase()];
-      if (hit && hit.basic) {
-        l.example = hit.basic;
-        l.exampleIpa = hit.basicIpa;
-        l.exampleZh = hit.basicZh;
+    setStatus('生成例句中…', '');
+    let r = await chatSmart({ model, prompt, json: true, timeoutMs: 60000 });
+    usedModel = r.usedModel || model;
+    lastText = r.text || '';
+    if (!lastText.trim()) {
+      r = await chatSmart({ model, prompt, json: false, timeoutMs: 60000 });
+      usedModel = r.usedModel || usedModel;
+      lastText = r.text || '';
+    }
+    if (!lastText.trim()) {
+      lastErr = '模型回傳空內容';
+    } else {
+      o = extractJSON(lastText);
+      if (!o || !o.examples) lastErr = '模型回傳非 JSON';
+    }
+  } catch (e1) {
+    lastErr = e1.message;
+  }
+  // 全部失敗：用離線句庫補齊（保證每句不同、不寫 in the picture）
+  if (!o || !o.examples) {
+    const filled = finalizeExamples();
+    setStatus(`⚠ 例句改用 108 課綱句庫產生（${briefErr({ message: lastErr })}）`, '');
+    toast(`例句改由內建句庫產生（${briefErr({ message: lastErr })}）`, 'warn', 3000);
+    renderCards(); renderChunks();
+    return;
+  }
+  // 成功：套用結果
+  const map = {};
+  o.examples.forEach(e => {
+    const en = String(e.en || '').toLowerCase().trim();
+    if (en) map[en] = {
+      basic: String(e.basic || e.example || '').trim(),
+      basicIpa: normalizeIPA(e.basicIpa || e.exampleIpa || ''),
+      basicZh: toTrad(String(e.basicZh || e.exampleZh || '').trim()),
+      advanced: String(e.advanced || '').trim(),
+      advancedIpa: normalizeIPA(e.advancedIpa || ''),
+      advancedZh: toTrad(String(e.advancedZh || '').trim())
+    };
+  });
+  let updated = 0, advancedCount = 0;
+  labels.forEach(l => {
+    const hit = map[l.en.toLowerCase()];
+    if (hit && hit.basic) {
+      l.example = hit.basic;
+      l.exampleIpa = hit.basicIpa;
+      l.exampleZh = hit.basicZh;
+      if (hit.advanced) {
         l.advanced = hit.advanced;
         l.advancedIpa = hit.advancedIpa;
         l.advancedZh = hit.advancedZh;
       }
-    });
-    // 如果還有缺的，用 fallback 補
-    labels.forEach(l => {
-      if (!l.example) {
-        l.example = `The ${l.en} is in the picture.`;
-        l.exampleZh = `這張圖中有${l.zh}。`;
-      }
-    });
-    renderCards();
-  } catch(e) {
-    console.warn('generateExamples failed', e);
-    // 失敗就用 fallback
-    labels.forEach(l => {
-      if (!l.example) {
-        l.example = `The ${l.en} is in the picture.`;
-        l.exampleZh = `這張圖中有${l.zh}。`;
-      }
-    });
-  }
+      updated++;
+      if (l.advanced) advancedCount++;
+    }
+  });
+  // 檢查：模板句 / 缺字 / 重複 → 用句庫重寫，確保每句都不同
+  finalizeExamples();
+  const advancedFinal = labels.filter(l => l.advanced).length;
+  const who = usedModel && usedModel !== model ? `（${modelLabel(usedModel)} 接手）` : '';
+  setStatus(`✓ ${labels.length} 個單字完成：基礎＋進階 ${advancedFinal} 組，語塊 ${usedChunkCount()} 條${who}`, 'ok');
+  renderCards(); renderChunks();
 }
+function fillMissingExamples() { return finalizeExamples(); }
 
 async function reidentifySelected() {
   if (!selected || busy) return; busy = true;
   const lab = selected, model = $('modelSel').value || VLM_DEFAULT;
   try {
-    const { text } = await ollamaChat({ model, prompt: PROMPT_ONE, image: cropAround(lab.x, lab.y), json: true, timeoutMs: 90000 });
+    const { text } = await chatSmart({ model, prompt: PROMPT_ONE, image: cropAround(lab.x, lab.y), json: true, timeoutMs: 90000 });
     const o = extractJSON(text); if (!o) throw new Error('沒有回傳');
     const en = String(pickField(o, ALIAS.en) || '').trim().toLowerCase(); if (!en) throw new Error('沒有辨識出');
     lab.en = en; lab.ipa = normalizeIPA(pickField(o, ALIAS.ipa)) || lab.ipa;
@@ -831,7 +1128,7 @@ async function verifyLabels() {
   const model = $('modelSel').value || VLM_DEFAULT;
   try {
     const words = labels.map(l => l.en);
-    const { text } = await ollamaChat({ model, prompt: PROMPT_VERIFY(words), image: makeThumb(1024), json: true, timeoutMs: 90000 });
+    const { text } = await chatSmart({ model, prompt: PROMPT_VERIFY(words), image: makeThumb(1024), json: true, timeoutMs: 90000 });
     const o = extractJSON(text) || {};
     const missSet = new Set();
     (o.check || []).forEach(e => { if (!e.seen) missSet.add(String(e.en||'').toLowerCase()); });
@@ -847,11 +1144,16 @@ function renderSentence() {
   const box = $('sentenceBox');
   if (!sentence) { box.innerHTML = '<div class="empty">自動辨識後自動產生</div>'; return; }
   const lines = (sentence.lines && sentence.lines.length) ? sentence.lines : [{ en: sentence.en, ipa: sentence.ipa || '', zh: sentence.zh || '' }];
-  box.innerHTML = `
-    <div class="en" onclick="speak('${esc(sentence.en).replace(/'/g, "\\'")}')">${lines.map(l => `<div class="sent-line">${esc(l.en)} 🔊</div>`).join('')}</div>
-    ${lines.map(l => l.ipa ? `<div class="ipa">${esc(l.ipa)}</div>` : '').join('')}
-    ${lines.map(l => l.zh ? `<div>${esc(l.zh)}</div>` : '').join('')}
-    <div style="margin-top:8px"><button class="btn sm gray" onclick="composeSentence()">✎ 重寫句子</button></div>`;
+  box.innerHTML = lines.map((l, i) => `
+    <div class="sent-block" onclick="speak('${esc(l.en).replace(/'/g, "\\'")}')" title="點擊發音">
+      <div class="sent-no">${i + 1}</div>
+      <div class="sent-body">
+        <div class="en">${esc(l.en)} <span style="opacity:.55;font-weight:400">🔊</span></div>
+        ${l.ipa ? `<div class="ipa">${esc(l.ipa)}</div>` : ''}
+        ${l.zh ? `<div class="zh">${esc(l.zh)}</div>` : ''}
+      </div>
+    </div>`).join('') + `
+    <div style="margin-top:10px"><button class="btn sm gray" onclick="composeSentence()">✎ 重寫句子</button></div>`;
 }
 
 function renderGrammar() {
@@ -888,6 +1190,7 @@ function renderCards() {
         <div style="font-size:13px;color:#93c5fd;cursor:pointer" onclick="speak('${esc(l.example).replace(/'/g, "\\'")}')" title="點擊發音">${esc(l.example)}</div>
         ${l.exampleIpa ? `<div style="font-size:11px;color:#9ca3af;margin-top:2px">${esc(l.exampleIpa)}</div>` : ''}
         ${l.exampleZh ? `<div style="font-size:12px;color:#fbbf24;margin-top:2px">${esc(l.exampleZh)}</div>` : ''}
+        <div>${findChunks(l.example).slice(0, 3).map(c => `<span class="cchip">${esc(c)}</span>`).join('')}</div>
       </div>` : ''}
       ${l.advanced ? `
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid #3a3f4b;text-align:left">
@@ -895,6 +1198,7 @@ function renderCards() {
         <div style="font-size:13px;color:#93c5fd;cursor:pointer" onclick="speak('${esc(l.advanced).replace(/'/g, "\\'")}')" title="點擊發音">${esc(l.advanced)}</div>
         ${l.advancedIpa ? `<div style="font-size:11px;color:#9ca3af;margin-top:2px">${esc(l.advancedIpa)}</div>` : ''}
         ${l.advancedZh ? `<div style="font-size:12px;color:#fbbf24;margin-top:2px">${esc(l.advancedZh)}</div>` : ''}
+        <div>${findChunks(l.advanced).slice(0, 3).map(c => `<span class="cchip">${esc(c)}</span>`).join('')}</div>
       </div>` : ''}
     </div>`).join('');
 }
@@ -929,7 +1233,7 @@ function prevFlashcard() { if (labels.length) { fcIndex = (fcIndex - 1 + labels.
    12. 隨堂小測 View
    ============================================================ */
 function startQuiz() {
-  if (labels.length < 3) { alert('至少需要 3 個單字才能測驗'); return; }
+  if (labels.length < 3) { toast('至少需要 3 個單字才能測驗', 'err'); return; }
   quizIndex = 0; quizScore = 0;
   $('quizContent').style.display = ''; $('quizResult').style.display = 'none';
   quizQuestions = buildQuizQuestions();
@@ -938,22 +1242,18 @@ function startQuiz() {
 
 function buildQuizQuestions() {
   const qs = [];
-  const pool = [...labels];
-  // 題型1: 英文選中文
-  for (let i = 0; i < Math.min(3, pool.length); i++) {
-    const correct = pool[i];
-    const others = pool.filter(l => l !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
-    const opts = [correct.zh, ...others.map(l => l.zh)].sort(() => Math.random() - 0.5);
-    qs.push({ q: `「${correct.en}」的中文意思是？`, options: opts, answer: opts.indexOf(correct.zh), explain: `${correct.en} ${correct.ipa} = ${correct.zh}` });
-  }
-  // 題型2: 中文選英文
-  for (let i = 3; i < Math.min(5, pool.length); i++) {
-    const correct = pool[i];
-    const others = pool.filter(l => l !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
-    const opts = [correct.en, ...others.map(l => l.en)].sort(() => Math.random() - 0.5);
-    qs.push({ q: `「${correct.zh}」的英文是？`, options: opts, answer: opts.indexOf(correct.en), explain: `${correct.zh} = ${correct.en} ${correct.ipa}` });
-  }
-  return qs.sort(() => Math.random() - 0.5);
+  const pool = labels.slice(0, 10);
+  pool.forEach((correct, i) => {
+    const others = labels.filter(l => l !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
+    if (i % 2 === 0) {
+      const opts = [correct.zh, ...others.map(l => l.zh)].sort(() => Math.random() - 0.5);
+      qs.push({ q: `「${correct.en}」的中文意思是？`, options: opts, answer: opts.indexOf(correct.zh), explain: `${correct.en} ${correct.ipa} = ${correct.zh}` });
+    } else {
+      const opts = [correct.en, ...others.map(l => l.en)].sort(() => Math.random() - 0.5);
+      qs.push({ q: `「${correct.zh}」的英文是？`, options: opts, answer: opts.indexOf(correct.en), explain: `${correct.zh} = ${correct.en} ${correct.ipa}` });
+    }
+  });
+  return qs;
 }
 
 let selectedOption = null;
@@ -1011,7 +1311,7 @@ function confirmAnswer() {
   for (let b of opts) b.disabled = true;
   const fb = $('quizFeedback');
   if (selectedOption === q.answer) {
-    quizScore += 20;
+    quizScore += Math.round(100 / quizQuestions.length);
     opts[selectedOption].classList.add('correct');
     fb.className = 'quiz-feedback show good'; fb.innerHTML = `✓ 答對了！${q.explain}`;
   } else {
@@ -1040,27 +1340,45 @@ function nextQuestion() {
 function onRate(v) { speechRate = parseFloat(v); $('rateVal').textContent = v + 'x'; }
 function speak(text) {
   if (!text) return;
-  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = speechRate; speechSynthesis.speak(u); } catch(e) { alert('瀏覽器不支援發音'); }
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = speechRate; speechSynthesis.speak(u); } catch(e) { toast('瀏覽器不支援發音', 'err'); }
 }
 
 /* ============================================================
    14. 匯出 PNG
    ============================================================ */
+function wrapText(ctx, text, maxWidth) {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const out = []; let cur = '';
+  words.forEach(w => {
+    const t = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(t).width > maxWidth && cur) { out.push(cur); cur = w; } else { cur = t; }
+  });
+  if (cur) out.push(cur);
+  return out.length ? out : [''];
+}
 function exportPNG() {
-  if (!img.src) { alert('請先選擇圖片'); return; }
+  if (!img.src) { toast('請先選擇圖片', 'err'); return; }
   const W = img.naturalWidth, H = img.naturalHeight;
-  const c = document.createElement('canvas'); c.width = W; c.height = H + 80;
-  const ctx = c.getContext('2d'); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H + 80);
-  ctx.drawImage(img, 0, 0, W, H);
+  const enFont = `700 ${Math.round(H * 0.024)}px "Segoe UI", sans-serif`;
+  const zhFont = `${Math.round(H * 0.017)}px "Microsoft JhengHei", sans-serif`;
+  const mc = document.createElement('canvas').getContext('2d');
+  let enLines = [], zhLines = [];
   if (sentence) {
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
-    ctx.font = `700 ${Math.round(H*0.025)}px "Segoe UI", sans-serif`;
-    ctx.fillText(sentence.en, W/2, H + 25);
-    ctx.fillStyle = '#bbb'; ctx.font = `${Math.round(H*0.016)}px "Segoe UI", sans-serif`;
-    if (sentence.ipa) ctx.fillText(sentence.ipa, W/2, H + 48);
-    ctx.fillStyle = '#fff'; ctx.font = `${Math.round(H*0.018)}px "Microsoft JhengHei", sans-serif`;
-    if (sentence.zh) ctx.fillText(sentence.zh, W/2, H + 68);
+    mc.font = enFont; enLines = wrapText(mc, sentence.en || '', W * 0.94);
+    mc.font = zhFont; zhLines = wrapText(mc, sentence.zh || '', W * 0.94);
   }
+  const pad = Math.round(H * 0.014), lh = Math.round(H * 0.032), zlh = Math.round(H * 0.024);
+  const footer = Math.max(Math.round(H * 0.09), pad * 2 + enLines.length * lh + zhLines.length * zlh + pad);
+  const c = document.createElement('canvas'); c.width = W; c.height = H + footer;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H + footer);
+  ctx.drawImage(img, 0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  let y = H + pad;
+  ctx.fillStyle = '#fff'; ctx.font = enFont;
+  enLines.forEach(l => { ctx.fillText(l, W / 2, y); y += lh; });
+  ctx.fillStyle = '#fbbf24'; ctx.font = zhFont;
+  zhLines.forEach(l => { ctx.fillText(l, W / 2, y); y += zlh; });
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   labels.forEach(lab => {
     ctx.font = `800 ${Math.round(H*0.026)}px "Segoe UI", sans-serif`;
@@ -1073,7 +1391,695 @@ function exportPNG() {
 }
 
 /* ============================================================
-   15. 啟動
+   15. 108 課綱 A2-B1 句庫：句型 / 語塊 / 核心名詞
+   ============================================================ */
+const BAD_TEMPLATE = /in the picture|in this picture|in the photo|clearly visible|as shown in the/i;
+
+const CHUNKS = [
+  { en:'get up', zh:'起床', type:'動詞片語' },
+  { en:'wake up', zh:'醒來', type:'動詞片語' },
+  { en:'put on', zh:'穿上／戴上', type:'動詞片語' },
+  { en:'take off', zh:'脫下／起飛', type:'動詞片語' },
+  { en:'turn on', zh:'打開（電器）', type:'動詞片語' },
+  { en:'turn off', zh:'關掉（電器）', type:'動詞片語' },
+  { en:'pick up', zh:'撿起／接送', type:'動詞片語' },
+  { en:'give up', zh:'放棄', type:'動詞片語' },
+  { en:'look for', zh:'尋找', type:'動詞片語' },
+  { en:'find out', zh:'查出／發現', type:'動詞片語' },
+  { en:'look at', zh:'看著', type:'動詞片語' },
+  { en:'take care of', zh:'照顧', type:'動詞片語' },
+  { en:'look after', zh:'照顧', type:'動詞片語' },
+  { en:'come back', zh:'回來', type:'動詞片語' },
+  { en:'go out', zh:'外出', type:'動詞片語' },
+  { en:'hang out', zh:'閒逛', type:'動詞片語' },
+  { en:'work out', zh:'運動／解決', type:'動詞片語' },
+  { en:'run out of', zh:'用完', type:'動詞片語' },
+  { en:'get along with', zh:'與…相處', type:'動詞片語' },
+  { en:'take part in', zh:'參加', type:'動詞片語' },
+  { en:'pay attention to', zh:'注意', type:'動詞片語' },
+  { en:'look forward to', zh:'期待', type:'動詞片語' },
+  { en:'depend on', zh:'依靠／取決於', type:'動詞片語' },
+  { en:'belong to', zh:'屬於', type:'動詞片語' },
+  { en:'deal with', zh:'處理', type:'動詞片語' },
+  { en:'point at', zh:'指向', type:'動詞片語' },
+  { en:'wait for', zh:'等待', type:'動詞片語' },
+  { en:'listen to', zh:'聽', type:'動詞片語' },
+  { en:'laugh at', zh:'嘲笑', type:'動詞片語' },
+  { en:'worry about', zh:'擔心', type:'動詞片語' },
+  { en:'think about', zh:'思考', type:'動詞片語' },
+  { en:'talk about', zh:'談論', type:'動詞片語' },
+  { en:'arrive at', zh:'抵達（小地方）', type:'動詞片語' },
+  { en:'take a picture', zh:'拍照', type:'動詞片語' },
+  { en:'make friends', zh:'交朋友', type:'動詞片語' },
+  { en:'keep in touch', zh:'保持聯絡', type:'動詞片語' },
+  { en:'have fun', zh:'玩得開心', type:'動詞片語' },
+  { en:'make a decision', zh:'做決定', type:'動詞片語' },
+  { en:'take a break', zh:'休息一下', type:'動詞片語' },
+  { en:'do homework', zh:'寫作業', type:'動詞片語' },
+  { en:'have breakfast', zh:'吃早餐', type:'動詞片語' },
+  { en:'be interested in', zh:'對…有興趣', type:'動詞片語' },
+  { en:'be good at', zh:'擅長', type:'動詞片語' },
+  { en:'be afraid of', zh:'害怕', type:'動詞片語' },
+  { en:'be proud of', zh:'以…為榮', type:'動詞片語' },
+
+  { en:'in front of', zh:'在…前面', type:'介系詞片語' },
+  { en:'next to', zh:'在…旁邊', type:'介系詞片語' },
+  { en:'on the left', zh:'在左邊', type:'介系詞片語' },
+  { en:'on the right', zh:'在右邊', type:'介系詞片語' },
+  { en:'at the same time', zh:'同時', type:'介系詞片語' },
+  { en:'by the way', zh:'順便一提', type:'介系詞片語' },
+  { en:'in the end', zh:'最後', type:'介系詞片語' },
+  { en:'at first', zh:'起初', type:'介系詞片語' },
+  { en:'as usual', zh:'一如往常', type:'介系詞片語' },
+  { en:'in fact', zh:'事實上', type:'介系詞片語' },
+  { en:'for example', zh:'例如', type:'介系詞片語' },
+  { en:'such as', zh:'例如', type:'介系詞片語' },
+  { en:'because of', zh:'因為', type:'介系詞片語' },
+  { en:'instead of', zh:'而不是', type:'介系詞片語' },
+  { en:'according to', zh:'根據', type:'介系詞片語' },
+  { en:'in order to', zh:'為了', type:'介系詞片語' },
+  { en:'on time', zh:'準時', type:'介系詞片語' },
+  { en:'in time', zh:'及時', type:'介系詞片語' },
+  { en:'right away', zh:'立刻', type:'介系詞片語' },
+  { en:'right now', zh:'現在', type:'介系詞片語' },
+  { en:'at least', zh:'至少', type:'介系詞片語' },
+  { en:'so far', zh:'到目前為止', type:'介系詞片語' },
+  { en:'by accident', zh:'偶然', type:'介系詞片語' },
+  { en:'on purpose', zh:'故意', type:'介系詞片語' },
+  { en:'in advance', zh:'事先', type:'介系詞片語' },
+  { en:'in general', zh:'一般而言', type:'介系詞片語' },
+  { en:'at once', zh:'立刻', type:'介系詞片語' },
+  { en:'from time to time', zh:'偶爾', type:'介系詞片語' },
+  { en:'once in a while', zh:'偶爾', type:'介系詞片語' },
+  { en:'all of a sudden', zh:'突然', type:'介系詞片語' },
+  { en:'as soon as', zh:'一…就…', type:'介系詞片語' },
+  { en:'as long as', zh:'只要', type:'介系詞片語' },
+  { en:'even though', zh:'雖然', type:'介系詞片語' },
+  { en:'in addition', zh:'此外', type:'介系詞片語' },
+  { en:'on the other hand', zh:'另一方面', type:'介系詞片語' },
+  { en:'as a result', zh:'結果', type:'介系詞片語' },
+  { en:'a lot of', zh:'很多', type:'介系詞片語' },
+  { en:'a few', zh:'一些（可數）', type:'介系詞片語' },
+  { en:'a little', zh:'一些（不可數）', type:'介系詞片語' },
+  { en:'after class', zh:'下課後', type:'介系詞片語' },
+  { en:'after school', zh:'放學後', type:'介系詞片語' },
+  { en:'every day', zh:'每天', type:'介系詞片語' },
+  { en:'last week', zh:'上週', type:'介系詞片語' },
+  { en:'in a hurry', zh:'匆忙地', type:'介系詞片語' },
+  { en:'on the street', zh:'在街上', type:'介系詞片語' },
+  { en:'so that', zh:'以便／這樣一來', type:'介系詞片語' },
+  { en:'during the trip', zh:'旅途中', type:'介系詞片語' },
+  { en:'for many years', zh:'很多年', type:'介系詞片語' },
+
+  { en:'heavy rain', zh:'大雨', type:'高頻搭配' },
+  { en:'strong wind', zh:'強風', type:'高頻搭配' },
+  { en:'bright light', zh:'強光', type:'高頻搭配' },
+  { en:'close friend', zh:'好朋友', type:'高頻搭配' },
+  { en:'hard work', zh:'努力', type:'高頻搭配' },
+  { en:'free time', zh:'空閒時間', type:'高頻搭配' },
+  { en:'good idea', zh:'好主意', type:'高頻搭配' },
+  { en:'long way', zh:'遠路', type:'高頻搭配' },
+  { en:'fresh air', zh:'新鮮空氣', type:'高頻搭配' },
+  { en:'clean water', zh:'乾淨的水', type:'高頻搭配' },
+  { en:'public place', zh:'公共場所', type:'高頻搭配' },
+  { en:'busy street', zh:'熱鬧的街道', type:'高頻搭配' },
+  { en:'quiet night', zh:'安靜的夜晚', type:'高頻搭配' },
+  { en:'big deal', zh:'大事', type:'高頻搭配' },
+  { en:'high price', zh:'高價', type:'高頻搭配' },
+  { en:'low price', zh:'低價', type:'高頻搭配' },
+  { en:'safe place', zh:'安全的地方', type:'高頻搭配' },
+  { en:'great fun', zh:'很有趣', type:'高頻搭配' },
+  { en:'common sense', zh:'常識', type:'高頻搭配' },
+  { en:'personal space', zh:'個人空間', type:'高頻搭配' },
+  { en:'daily life', zh:'日常生活', type:'高頻搭配' },
+  { en:'modern life', zh:'現代生活', type:'高頻搭配' },
+  { en:'natural beauty', zh:'自然之美', type:'高頻搭配' },
+  { en:'warm welcome', zh:'熱烈歡迎', type:'高頻搭配' },
+  { en:'small talk', zh:'閒聊', type:'高頻搭配' },
+  { en:'deep breath', zh:'深呼吸', type:'高頻搭配' },
+  { en:'fast food', zh:'速食', type:'高頻搭配' },
+  { en:'fresh fruit', zh:'新鮮水果', type:'高頻搭配' },
+  { en:'good health', zh:'健康', type:'高頻搭配' },
+  { en:'heavy traffic', zh:'交通壅塞', type:'高頻搭配' },
+  { en:'light rain', zh:'小雨', type:'高頻搭配' },
+  { en:'loud noise', zh:'大聲的噪音', type:'高頻搭配' },
+  { en:'wide street', zh:'寬闊的街道', type:'高頻搭配' },
+  { en:'tall building', zh:'高樓', type:'高頻搭配' },
+  { en:'young people', zh:'年輕人', type:'高頻搭配' },
+  { en:'old friend', zh:'老朋友', type:'高頻搭配' },
+  { en:'spare time', zh:'空閒時間', type:'高頻搭配' },
+  { en:'sweet smell', zh:'香味', type:'高頻搭配' },
+  { en:'get dirty', zh:'變髒', type:'高頻搭配' },
+
+  { en:'It is important to ...', zh:'重要的是…', type:'句型語塊', noMatch:true },
+  { en:'It takes ... to ...', zh:'花…時間做…', type:'句型語塊', noMatch:true },
+  { en:'There is / There are', zh:'有…', type:'句型語塊', noMatch:true },
+  { en:'I would like to ...', zh:'我想要…', type:'句型語塊', noMatch:true },
+  { en:'Would you mind ...?', zh:'你介意…嗎？', type:'句型語塊', noMatch:true },
+  { en:'How about ...?', zh:'…如何？', type:'句型語塊', noMatch:true },
+  { en:'Why don\'t we ...?', zh:'我們何不…？', type:'句型語塊', noMatch:true },
+  { en:'as ... as', zh:'和…一樣', type:'句型語塊', noMatch:true },
+  { en:'so ... that', zh:'如此…以致於', type:'句型語塊', noMatch:true },
+  { en:'too ... to', zh:'太…而不能', type:'句型語塊', noMatch:true },
+  { en:'not only ... but also', zh:'不但…而且', type:'句型語塊', noMatch:true },
+  { en:'either ... or', zh:'不是…就是', type:'句型語塊', noMatch:true },
+  { en:'the more ..., the more ...', zh:'越…越…', type:'句型語塊', noMatch:true },
+  { en:'It seems that ...', zh:'似乎…', type:'句型語塊', noMatch:true },
+  { en:'I am afraid that ...', zh:'恐怕…', type:'句型語塊', noMatch:true }
+];
+
+/* --- A2-B1 核心名詞（可被標註的具體名詞，依主題分類） --- */
+const CORE_BY_CAT = {
+  object: 'door=門,window=窗戶,key=鑰匙,lamp=檯燈,mirror=鏡子,clock=時鐘,shelf=架子,drawer=抽屜,cabinet=櫃子,sofa=沙發,chair=椅子,table=桌子,desk=書桌,bed=床,pillow=枕頭,blanket=毯子,curtain=窗簾,carpet=地毯,towel=毛巾,soap=肥皂,brush=刷子,bucket=水桶,broom=掃把,trash=垃圾,box=箱子,basket=籃子,bottle=瓶子,cup=杯子,plate=盤子,bowl=碗,spoon=湯匙,fork=叉子,knife=刀子,pot=鍋子,pan=平底鍋,oven=烤箱,fridge=冰箱,sink=水槽,toilet=馬桶,shower=淋浴,fan=電風扇,switch=開關,rope=繩子,ladder=梯子,tool=工具,hammer=鐵鎚,nail=釘子,scissors=剪刀,button=鈕扣,pocket=口袋,wallet=錢包,umbrella=雨傘,backpack=背包,bag=袋子,suitcase=行李箱,ticket=票,map=地圖,sign=標誌,poster=海報,picture=圖片,camera=相機,phone=手機,computer=電腦,screen=螢幕,keyboard=鍵盤,battery=電池,watch=手錶,ring=戒指,necklace=項鍊,glasses=眼鏡',
+  clothes: 'hat=帽子,cap=棒球帽,helmet=安全帽,shirt=襯衫,dress=洋裝,skirt=裙子,pants=褲子,jeans=牛仔褲,shorts=短褲,coat=外套,jacket=夾克,sweater=毛衣,uniform=制服,scarf=圍巾,gloves=手套,socks=襪子,shoes=鞋子,boots=靴子,belt=皮帶,tie=領帶,apron=圍裙',
+  nature: 'tree=樹,flower=花,grass=草,leaf=葉子,branch=樹枝,root=根,seed=種子,forest=森林,plant=植物,rock=岩石,stone=石頭,sand=沙子,soil=土壤,water=水,ice=冰,fire=火,smoke=煙,dust=灰塵,mud=泥巴,sky=天空,cloud=雲,sun=太陽,moon=月亮,star=星星,rain=雨,snow=雪,wind=風,shadow=影子,light=光,river=河,lake=湖,sea=海,wave=海浪,beach=海灘,mountain=山,hill=小山,valley=山谷,island=島,field=田野',
+  food: 'bread=麵包,rice=米飯,noodle=麵條,soup=湯,meat=肉,egg=蛋,milk=牛奶,cheese=起司,butter=奶油,juice=果汁,coffee=咖啡,tea=茶,cake=蛋糕,cookie=餅乾,candy=糖果,chocolate=巧克力,pizza=披薩,sandwich=三明治,salad=沙拉,hamburger=漢堡,fruit=水果,apple=蘋果,banana=香蕉,orange=橘子,grape=葡萄,lemon=檸檬,peach=桃子,strawberry=草莓,watermelon=西瓜,tomato=番茄,potato=馬鈴薯,carrot=紅蘿蔔,onion=洋蔥,cabbage=高麗菜,mushroom=蘑菇,corn=玉米,bean=豆子,salt=鹽,sugar=糖',
+  animal: 'dog=狗,cat=貓,bird=鳥,fish=魚,horse=馬,cow=牛,sheep=羊,pig=豬,duck=鴨子,chicken=雞,rabbit=兔子,mouse=老鼠,tiger=老虎,lion=獅子,elephant=大象,monkey=猴子,snake=蛇,frog=青蛙,spider=蜘蛛,bee=蜜蜂,butterfly=蝴蝶,ant=螞蟻,insect=昆蟲,puppy=小狗,kitten=小貓',
+  person: 'man=男人,woman=女人,boy=男孩,girl=女孩,child=小孩,baby=嬰兒,person=人,people=人們,student=學生,teacher=老師,driver=司機,rider=騎士,worker=工人,doctor=醫生,nurse=護士,farmer=農夫,player=球員,passenger=乘客,friend=朋友,family=家人,neighbor=鄰居,guest=客人,chef=廚師,waiter=服務生,singer=歌手,artist=藝術家',
+  place: 'home=家,house=房子,room=房間,kitchen=廚房,bedroom=臥室,bathroom=浴室,living room=客廳,garden=花園,yard=院子,gate=大門,fence=籬笆,garage=車庫,wall=牆,floor=地板,roof=屋頂,stairs=樓梯,park=公園,street=街道,road=道路,city=城市,town=鎮,village=村莊,school=學校,hospital=醫院,station=車站,airport=機場,market=市場,store=商店,shop=店,restaurant=餐廳,library=圖書館,museum=博物館,bridge=橋,building=建築物,zoo=動物園,hotel=旅館,bank=銀行,office=辦公室,factory=工廠,playground=遊樂場,classroom=教室,campus=校園,square=廣場,tower=塔,castle=城堡,temple=寺廟,church=教堂,farm=農場',
+  vehicle: 'car=汽車,bus=公車,bike=腳踏車,bicycle=腳踏車,train=火車,plane=飛機,boat=小船,ship=船,truck=卡車,motorcycle=機車,scooter=機車,taxi=計程車,van=廂型車,helicopter=直升機',
+  body: 'hand=手,head=頭,eye=眼睛,ear=耳朵,nose=鼻子,mouth=嘴巴,arm=手臂,leg=腿,foot=腳,finger=手指,hair=頭髮,face=臉,shoulder=肩膀,knee=膝蓋,tooth=牙齒,neck=脖子'
+};
+const CORE_MAP = new Map();
+const CORE_NOUNS = [];
+Object.keys(CORE_BY_CAT).forEach(cat => {
+  CORE_BY_CAT[cat].split(',').forEach(pair => {
+    const bits = pair.split('=');
+    const en = (bits[0] || '').trim().toLowerCase();
+    if (!en || CORE_MAP.has(en)) return;
+    const item = { en, zh: (bits[1] || '').trim(), cat };
+    CORE_MAP.set(en, item);
+    CORE_NOUNS.push(item);
+  });
+});
+
+const CAT_HINTS = {
+  person: ['man','woman','boy','girl','child','kid','baby','person','people','student','teacher','driver','rider','worker','player','doctor','nurse','farmer','friend','family','crowd','lady','guy','passenger','guest','chef','waiter','singer','artist'],
+  animal: ['dog','cat','bird','fish','horse','cow','sheep','pig','duck','chicken','mouse','rabbit','tiger','lion','elephant','monkey','snake','frog','spider','bee','butterfly','ant','insect','animal','puppy','kitten'],
+  vehicle: ['car','bus','bike','bicycle','train','plane','boat','ship','truck','motorcycle','scooter','taxi','van','helicopter','wheel'],
+  clothes: ['shirt','dress','hat','cap','coat','jacket','pants','shoes','boots','socks','gloves','scarf','helmet','uniform','skirt','sweater','tie','belt','bag','backpack','umbrella','glasses','watch','ring'],
+  food: ['apple','bread','rice','noodle','cake','coffee','tea','juice','milk','fruit','vegetable','meat','egg','soup','salad','sandwich','pizza','cookie','candy','sugar','salt','cheese','butter','dish','plate','bowl','cup','glass','bottle'],
+  place: ['park','street','road','city','town','village','school','hospital','station','airport','market','store','shop','restaurant','library','museum','bridge','building','room','kitchen','garden','farm','field','playground','zoo','hotel','office','factory'],
+  nature: ['sky','cloud','sun','moon','star','tree','flower','grass','leaf','rock','stone','water','sea','wave','sand','snow','rain','wind','light','shadow','forest','river','lake','mountain','hill','island'],
+  body: ['hand','head','eye','ear','nose','mouth','arm','leg','foot','finger','hair','face','shoulder','knee','tooth','neck','back']
+};
+
+const UNCOUNTABLE = new Set(['water','rice','bread','milk','sand','grass','hair','paper','wood','metal','stone','snow','rain','smoke','light','food','furniture','luggage','money','music','traffic','weather','information','homework','clothing','equipment','nature','air','fire','ice','salt','sugar','coffee','tea','juice','fruit','meat','fish','cheese','butter','oil','soup','dust','trash','garbage','cloth','leather','plastic','cotton','wool','electricity','energy','knowledge','advice','news','work','fun','exercise','research','soil','mud','steam','ash','cash','baggage']);
+const PLURAL_ONLY = new Set(['people','children','men','women','feet','teeth','mice','sheep','fish','deer','clothes','stairs','shorts','jeans','pants','glasses','scissors','goods','police']);
+const SINGULAR_S = new Set(['bus','glass','grass','class','dress','chess','gas','news','series','species','lens','plus','campus','octopus','virus','status','focus','cactus','analysis','basis','crisis','physics','maths','measles','canvas','atlas','bias','chaos']);
+const IRREG_PLURAL = { man:'men', woman:'women', child:'children', person:'people', foot:'feet', tooth:'teeth', mouse:'mice', sheep:'sheep', fish:'fish', deer:'deer', knife:'knives', leaf:'leaves', life:'lives', shelf:'shelves', wolf:'wolves', half:'halves', potato:'potatoes', tomato:'tomatoes', photo:'photos', piano:'pianos', hero:'heroes' };
+
+const ADJ_POOL = {
+  thing: [ {en:'new',zh:'新'},{en:'old',zh:'舊'},{en:'big',zh:'大'},{en:'small',zh:'小'},{en:'clean',zh:'乾淨'},{en:'dirty',zh:'髒'},{en:'heavy',zh:'重'},{en:'light',zh:'輕'},{en:'beautiful',zh:'漂亮'},{en:'useful',zh:'實用'},{en:'expensive',zh:'貴'},{en:'cheap',zh:'便宜'},{en:'safe',zh:'安全'},{en:'dangerous',zh:'危險'},{en:'quiet',zh:'安靜'},{en:'noisy',zh:'吵'},{en:'bright',zh:'亮'},{en:'dark',zh:'暗'},{en:'modern',zh:'現代'},{en:'simple',zh:'簡單'},{en:'popular',zh:'受歡迎'},{en:'comfortable',zh:'舒服'},{en:'strong',zh:'堅固'},{en:'weak',zh:'脆弱'},{en:'fresh',zh:'新鮮'},{en:'wet',zh:'濕'},{en:'dry',zh:'乾'},{en:'soft',zh:'柔軟'},{en:'hard',zh:'硬'},{en:'smooth',zh:'光滑'},{en:'wide',zh:'寬'},{en:'narrow',zh:'窄'},{en:'empty',zh:'空'},{en:'full',zh:'滿'},{en:'warm',zh:'溫暖'},{en:'cold',zh:'冷'} ],
+  scene: [ {en:'beautiful',zh:'漂亮'},{en:'quiet',zh:'安靜'},{en:'bright',zh:'明亮'},{en:'dark',zh:'暗'},{en:'cold',zh:'冷'},{en:'warm',zh:'溫暖'},{en:'clear',zh:'清澈'},{en:'wide',zh:'寬'},{en:'clean',zh:'乾淨'},{en:'fresh',zh:'清新'},{en:'empty',zh:'空'},{en:'busy',zh:'熱鬧'},{en:'peaceful',zh:'寧靜'},{en:'green',zh:'綠'},{en:'cool',zh:'涼爽'},{en:'sunny',zh:'晴朗'},{en:'calm',zh:'平靜'},{en:'lovely',zh:'可愛'},{en:'dry',zh:'乾'},{en:'wet',zh:'濕'},{en:'lively',zh:'有活力'} ],
+  person: [ {en:'happy',zh:'開心'},{en:'tired',zh:'累'},{en:'young',zh:'年輕'},{en:'kind',zh:'親切'},{en:'friendly',zh:'友善'},{en:'busy',zh:'忙'},{en:'strong',zh:'強壯'},{en:'calm',zh:'冷靜'},{en:'serious',zh:'嚴肅'},{en:'polite',zh:'有禮貌'},{en:'careful',zh:'小心'},{en:'confident',zh:'有自信'} ],
+  animal: [ {en:'small',zh:'小'},{en:'cute',zh:'可愛'},{en:'young',zh:'年幼'},{en:'hungry',zh:'餓'},{en:'friendly',zh:'友善'},{en:'quiet',zh:'安靜'},{en:'fast',zh:'快'},{en:'strong',zh:'強壯'},{en:'gentle',zh:'溫和'},{en:'lazy',zh:'懶'},{en:'active',zh:'活潑'},{en:'noisy',zh:'吵'} ]
+};
+const PLACE_POOL = [
+  {en:'on the table',zh:'桌上'},{en:'near the window',zh:'窗戶附近'},{en:'next to the door',zh:'門旁邊'},
+  {en:'in the box',zh:'盒子裡'},{en:'on the shelf',zh:'架子上'},{en:'at the corner',zh:'角落'},
+  {en:'on the wall',zh:'牆上'},{en:'behind the house',zh:'房子後面'},{en:'in front of the gate',zh:'大門前'},
+  {en:'on the grass',zh:'草地上'},{en:'in the classroom',zh:'教室裡'},{en:'under the desk',zh:'桌子底下'}
+];
+const PLACE_OUT = [
+  {en:'near the river',zh:'河邊'},{en:'under the tree',zh:'樹下'},{en:'by the road',zh:'路邊'},
+  {en:'in the park',zh:'公園裡'},{en:'on the hill',zh:'山上'},{en:'at the corner',zh:'角落'},
+  {en:'near the school',zh:'學校附近'},{en:'beside the lake',zh:'湖邊'},{en:'in the garden',zh:'花園裡'}
+];
+const TIME_POOL = [
+  {en:'today',zh:'今天'},{en:'right now',zh:'現在'},{en:'these days',zh:'最近'},{en:'every day',zh:'每天'},
+  {en:'in summer',zh:'夏天'},{en:'after school',zh:'放學後'},{en:'on weekends',zh:'週末'},
+  {en:'in the morning',zh:'早上'},{en:'at night',zh:'晚上'},{en:'this week',zh:'這週'}
+];
+const TIME_SHORT = [ {en:'today',zh:'今天'},{en:'right now',zh:'現在'},{en:'these days',zh:'最近'},{en:'this week',zh:'這週'} ];
+const TIME_NOW = [ {en:'right now',zh:'現在'},{en:'today',zh:'今天'} ];
+const ADJ_LOOK = [ {en:'new',zh:'新'},{en:'old',zh:'舊'},{en:'big',zh:'大'},{en:'small',zh:'小'},{en:'clean',zh:'乾淨'},{en:'dirty',zh:'髒'},{en:'beautiful',zh:'漂亮'},{en:'useful',zh:'實用'},{en:'expensive',zh:'貴'},{en:'cheap',zh:'便宜'},{en:'modern',zh:'現代'},{en:'simple',zh:'簡單'},{en:'popular',zh:'受歡迎'},{en:'comfortable',zh:'舒服'},{en:'strong',zh:'堅固'},{en:'soft',zh:'柔軟'},{en:'hard',zh:'硬'},{en:'smooth',zh:'光滑'},{en:'wide',zh:'寬'},{en:'narrow',zh:'窄'},{en:'bright',zh:'明亮'},{en:'dark',zh:'暗'},{en:'lovely',zh:'可愛'} ];
+const VERB_PERSON = [ {en:'standing',zh:'站著'},{en:'walking',zh:'走著'},{en:'smiling',zh:'微笑著'},{en:'looking around',zh:'東張西望'},{en:'waiting',zh:'等著'} ];
+const VERB_ANIMAL = [ {en:'running',zh:'跑來跑去'},{en:'sitting',zh:'坐著'},{en:'resting',zh:'休息'},{en:'looking for food',zh:'找食物'} ];
+
+/* 中文量詞（避免「一個樹」這種錯誤） */
+const ZH_MEASURE = {
+  tree:'一棵', plant:'一棵', bush:'一棵', crop:'一片', vegetable:'一棵', mushroom:'一朵', grass:'一片', flower:'一朵',
+  cloud:'一朵', star:'一顆', stone:'一顆', rock:'一顆', seed:'一顆', egg:'一顆', apple:'一顆', potato:'一顆', tomato:'一顆',
+  fence:'一道', wall:'一道', gate:'一道',
+  strawberry:'一顆', watermelon:'一顆', grape:'一顆', lemon:'一顆', peach:'一顆', orange:'一顆', banana:'一根', carrot:'一根',
+  corn:'一根', branch:'一根', finger:'一根', rope:'一條', street:'一條', road:'一條', river:'一條', tie:'一條', belt:'一條',
+  pants:'一條', skirt:'一條', scarf:'一條', fish:'一條', snake:'一條', shorts:'一條', jeans:'一條',
+  mountain:'一座', hill:'一座', island:'一座', bridge:'一座', temple:'一座', castle:'一座', tower:'一座', lake:'一座',
+  building:'一棟', house:'一棟', forest:'一片', field:'一片', beach:'一片', sea:'一片',
+  dog:'一隻', cat:'一隻', bird:'一隻', sheep:'一隻', duck:'一隻', chicken:'一隻', rabbit:'一隻', mouse:'一隻', tiger:'一隻',
+  lion:'一隻', monkey:'一隻', frog:'一隻', spider:'一隻', bee:'一隻', butterfly:'一隻', ant:'一隻', insect:'一隻',
+  puppy:'一隻', kitten:'一隻', horse:'一匹', cow:'一頭', pig:'一頭', elephant:'一頭',
+  car:'一輛', bus:'一輛', bike:'一輛', bicycle:'一輛', truck:'一輛', motorcycle:'一輛', scooter:'一輛', taxi:'一輛', van:'一輛',
+  train:'一列', plane:'一架', helicopter:'一架', boat:'一艘', ship:'一艘',
+  hat:'一頂', cap:'一頂', helmet:'一頂', shirt:'一件', dress:'一件', coat:'一件', jacket:'一件', sweater:'一件', uniform:'一件',
+  apron:'一件', shoes:'一雙', boots:'一雙', socks:'一雙', gloves:'一雙', glasses:'一副',
+  table:'一張', desk:'一張', chair:'一張', bed:'一張', sofa:'一張', ticket:'一張', map:'一張', picture:'一張', poster:'一張', card:'一張',
+  knife:'一把', spoon:'一把', fork:'一把', umbrella:'一把', key:'一把', scissors:'一把', brush:'一把', broom:'一把',
+  book:'一本', phone:'一支', pen:'一支', bottle:'一瓶', cup:'一杯', glass:'一杯', bowl:'一碗',
+  computer:'一台', camera:'一台', fan:'一台',
+  room:'一間', kitchen:'一間', bedroom:'一間', bathroom:'一間', classroom:'一間', shop:'一間', store:'一間', restaurant:'一間',
+  office:'一間', bank:'一間', hotel:'一間', library:'一間',
+  man:'一位', woman:'一位', boy:'一位', girl:'一位', child:'一位', baby:'一位', person:'一位', student:'一位', teacher:'一位',
+  driver:'一位', rider:'一位', worker:'一位', doctor:'一位', nurse:'一位', farmer:'一位', player:'一位', passenger:'一位',
+  friend:'一位', guest:'一位', chef:'一位', waiter:'一位', singer:'一位', artist:'一位', neighbor:'一位'
+};
+
+/* --- 基礎工具 --- */
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return Math.abs(h); }
+function pickFrom(arr, seed) { return arr[Math.abs(seed) % arr.length]; }
+function classify(word) {
+  const w = String(word || '').toLowerCase().trim();
+  if (CORE_MAP.has(w)) return CORE_MAP.get(w).cat;
+  const last = w.split(/\s+/).pop();
+  for (const cat of ['person','animal','vehicle','clothes','food','place','nature','body']) {
+    if (CAT_HINTS[cat].includes(w) || CAT_HINTS[cat].includes(last)) return cat;
+  }
+  return 'object';
+}
+function isPluralWord(word) {
+  const s = String(word || '').toLowerCase().trim();
+  if (PLURAL_ONLY.has(s)) return true;
+  const last = s.split(/\s+/).pop();
+  if (PLURAL_ONLY.has(last)) return true;
+  if (SINGULAR_S.has(last)) return false;
+  if (/(ss|us|is|ous)$/.test(last)) return false;
+  return /s$/.test(last) && last.length > 3;
+}
+function pluralize(word) {
+  const w = String(word || '').toLowerCase().trim();
+  if (isPluralWord(w)) return w;
+  const parts = w.split(' ');
+  const last = parts.pop();
+  if (IRREG_PLURAL[last]) return parts.concat(IRREG_PLURAL[last]).join(' ');
+  if (/(s|x|z|ch|sh)$/.test(last)) return parts.concat(last + 'es').join(' ');
+  if (/[^aeiou]y$/.test(last)) return parts.concat(last.slice(0, -1) + 'ies').join(' ');
+  return parts.concat(last + 's').join(' ');
+}
+const A_NOT_AN = ['uniform','university','user','union','unit','useful','usual','unique','european','one'];
+function aAn(word) {
+  const w = String(word || '').trim();
+  const first = w.split(/\s+/)[0].toLowerCase();
+  if (A_NOT_AN.includes(first)) return 'a ' + w;
+  if (/^(hour|honest|honor|heir)/.test(first)) return 'an ' + w;
+  return /^[aeiou]/.test(first) ? 'an ' + w : 'a ' + w;
+}
+function containsWord(sentence, word) {
+  const t = ' ' + String(sentence || '').toLowerCase().replace(/[^a-z' ]/g, ' ').replace(/\s+/g, ' ') + ' ';
+  const b = String(word || '').toLowerCase().trim();
+  if (!b) return false;
+  return t.includes(' ' + b + ' ') || t.includes(' ' + b + 's ') || t.includes(' ' + b + 'es ') || t.includes(' ' + pluralize(b) + ' ');
+}
+function normForChunk(text) {
+  return ' ' + String(text || '').toLowerCase().replace(/[^a-z' ]/g, ' ')
+    .replace(/\b(am|is|are|was|were|been|being)\b/g, 'be')
+    .replace(/\b([a-z]{4,})ing\b/g, (m, w) => w.replace(/ing$/, ''))
+    .replace(/\b([a-z]{4,})ed\b/g, (m, w) => w.replace(/ed$/, ''))
+    .replace(/\b([a-z]{4,})s\b/g, (m, w) => w.replace(/s$/, ''))
+    .replace(/\s+/g, ' ') + ' ';
+}
+function findChunks(text) {
+  const t = normForChunk(text);
+  return CHUNKS.filter(c => !c.noMatch && t.includes(' ' + normForChunk(c.en).trim() + ' ')).map(c => c.en);
+}
+function usedChunkCount() {
+  const set = new Set();
+  labels.forEach(l => { findChunks(l.example || '').forEach(c => set.add(c)); findChunks(l.advanced || '').forEach(c => set.add(c)); });
+  if (sentence) findChunks(sentence.en || '').forEach(c => set.add(c));
+  return set.size;
+}
+
+/* --- 造句上下文 --- */
+function ctxFor(word, zh, salt) {
+  salt = salt || 0;
+  const w = String(word || '').toLowerCase().trim();
+  const cat = classify(w);
+  const pl = isPluralWord(w);
+  const unc = UNCOUNTABLE.has(w) || UNCOUNTABLE.has(w.split(' ').pop());
+  const seed = hashStr(w) + salt;
+  const adjPool = ADJ_POOL[cat] || ADJ_POOL.thing;
+  const adj = pickFrom(adjPool, seed);
+  const adj2 = pickFrom(adjPool, seed + 17);
+  const look = pickFrom(ADJ_LOOK, seed + 41);
+  const placePool = (cat === 'nature' || cat === 'place' || cat === 'person' || cat === 'animal') ? PLACE_OUT : PLACE_POOL;
+  const place = pickFrom(placePool, seed + 5);
+  const place2 = pickFrom(placePool, seed + 23);
+  const time = pickFrom(TIME_POOL, seed + 11);
+  const timeS = pickFrom(TIME_SHORT, seed + 31);
+  const timeNow = pickFrom(TIME_NOW, seed + 43);
+  const bare = (pl || unc) ? w : aAn(w);
+  const measure = ZH_MEASURE[w] || (cat === 'person' ? '一位' : cat === 'animal' ? '一隻' : cat === 'vehicle' ? '一輛' : '一個');
+  return {
+    w, zh: zh || w, cat, pl, unc,
+    A: bare, T: 'the ' + w, W: w, Wp: pluralize(w),
+    ThereBe: pl ? 'There are' : 'There is',
+    isAre: pl ? 'are' : 'is',
+    wasWere: pl ? 'were' : 'was',
+    it: (pl || cat === 'person') ? 'them' : 'it',
+    they: pl ? 'they' : 'it',
+    thisThat: pl ? 'These' : 'This',
+    looksLook: pl ? 'look' : 'looks',
+    verbWork: pl ? 'work' : 'works',
+    verbBelong: pl ? 'belong' : 'belongs',
+    oneOnes: pl ? 'ones' : 'one',
+    artZh: (pl || unc) ? '' : measure,
+    thisZh: (pl || unc) ? '這' : measure.replace(/^一/, '這'),
+    haveZh: '有',
+    adj: adj.en, adjZh: adj.zh, adj2: adj2.en, adj2Zh: adj2.zh,
+    look: look.en, lookZh: look.zh,
+    place: place.en, placeZh: place.zh, place2: place2.en, place2Zh: place2.zh,
+    time: time.en, timeZh: time.zh, timeS: timeS.en, timeSZh: timeS.zh,
+    timeNow: timeNow.en, timeNowZh: timeNow.zh
+  };
+}
+
+/* --- 句型庫：基礎 A2 --- */
+const P_BASIC = [
+  { id:'b-there', cats:'any', make: c => ({ en:`${c.ThereBe} ${c.A} ${c.place}.`, zh:`${c.placeZh}${c.haveZh}${c.artZh}${c.zh}。` }) },
+  { id:'b-see', cats:'any', make: c => ({ en:`I can see ${c.A} ${c.place2}.`, zh:`我可以在${c.place2Zh}看到${c.artZh}${c.zh}。` }) },
+  { id:'b-lookat', cats:'any', make: c => ({ en:`She is looking at ${c.T} ${c.timeNow}.`, zh:`她${c.timeNowZh}正在看${c.zh}。` }) },
+  { id:'b-put', cats:['object','food','clothes'], make: c => ({ en:`Please put ${c.T} on the table.`, zh:`請把${c.zh}放在桌上。` }) },
+  { id:'b-need', cats:['object','clothes','food','vehicle'], make: c => ({ en:`We need ${c.A} for the trip.`, zh:`我們旅行需要${c.artZh}${c.zh}。` }) },
+  { id:'b-keep', cats:['object','food','clothes'], ok: c => !c.unc, make: c => ({ en:`He usually keeps ${c.T} in his bag.`, zh:`他通常把${c.zh}放在包包裡。` }) },
+  { id:'b-bought', cats:['object','clothes','food','vehicle'], make: c => ({ en:`They bought ${c.A} last week.`, zh:`他們上週買了${c.artZh}${c.zh}。` }) },
+  { id:'b-looks', cats:'any', make: c => ({ en:`${c.thisThat} ${c.W} ${c.looksLook} very ${c.look}.`, zh:`${c.thisZh}${c.zh}看起來很${c.lookZh}。` }) },
+  { id:'b-pass', cats:['object','food','clothes'], make: c => ({ en:`Can you pass me ${c.T}?`, zh:`你可以把${c.zh}遞給我嗎？` }) },
+  { id:'b-next', cats:['object','clothes','food','vehicle','place'], make: c => ({ en:`The ${c.W} ${c.isAre} next to the door.`, zh:`${c.zh}在門旁邊。` }) },
+  { id:'b-want', cats:['object','clothes','food','vehicle'], make: c => ({ en:`I want to buy ${c.A} tomorrow.`, zh:`我明天想買${c.artZh}${c.zh}。` }) },
+  { id:'b-like', cats:'any', make: c => ({ en:`My brother likes ${c.T} a lot.`, zh:`我弟弟很喜歡${c.zh}。` }) },
+  { id:'b-touch', cats:['object','food'], make: c => ({ en:`Don't touch ${c.T} with wet hands.`, zh:`不要用濕手碰${c.zh}。` }) },
+  { id:'b-isthere', cats:['object','clothes','food'], make: c => ({ en:`${c.pl ? 'Are' : 'Is'} there ${c.A} in your room?`, zh:`你房間裡有${c.artZh}${c.zh}嗎？` }) },
+  { id:'b-clean', cats:['object','vehicle'], make: c => ({ en:`He is cleaning ${c.T} with a cloth.`, zh:`他正在用布擦${c.zh}。` }) },
+  { id:'b-often', cats:['vehicle','animal','person','object'], make: c => ({ en:`We often see ${c.A} on the street.`, zh:`我們常在街上看到${c.artZh}${c.zh}。` }) },
+  { id:'b-hand', cats:['object','food','clothes'], ok: c => !c.pl && !c.unc, make: c => ({ en:`She has ${c.A} in her hand.`, zh:`她手上拿著${c.artZh}${c.zh}。` }) },
+  { id:'b-talk', cats:'any', make: c => ({ en:`Let's talk about ${c.T} after class.`, zh:`我們下課後談談${c.zh}。` }) },
+  { id:'b-very', cats:'any', make: c => ({ en:`The ${c.W} ${c.isAre} very ${c.adj2} ${c.timeS}.`, zh:`${c.timeSZh}${c.thisZh}${c.zh}很${c.adj2Zh}。` }) },
+  { id:'b-wear', cats:['clothes'], make: c => ({ en:`He put on ${c.T} before going out.`, zh:`他出門前穿上了${c.zh}。` }) },
+  { id:'b-parked', cats:['vehicle'], make: c => ({ en:`The ${c.W} is parked outside.`, zh:`${c.zh}停在外面。` }) },
+  { id:'b-feed', cats:['animal'], make: c => ({ en:`The boy is feeding the ${c.W} ${c.time}.`, zh:`男孩${c.timeZh}正在餵${c.zh}。` }) },
+  { id:'b-grow', cats:['nature'], ok: c => /tree|flower|grass|plant|leaf|branch|root|seed|bush|crop|vegetable|fruit|rice|corn|bean/.test(c.w), make: c => ({ en:`These ${c.Wp} grow well in spring.`, zh:`這些${c.zh}在春天長得很好。` }) },
+  { id:'b-standing', cats:['person'], make: c => ({ en:`A ${c.W} is standing in front of the door.`, zh:`一位${c.zh}站在門前。` }) }
+];
+
+/* --- 句型庫：進階 B1 --- */
+const P_ADV = [
+  { id:'a-although', cats:['object','vehicle','clothes'], make: c => ({ en:`Although the ${c.W} ${c.isAre} old, ${c.they} still ${c.verbWork} very well.`, zh:`雖然${c.zh}看起來很舊，但還是很好用。` }) },
+  { id:'a-since', cats:['object','place','vehicle'], ok: c => !c.pl && !c.unc, make: c => ({ en:`This ${c.W} has been here since I was a child.`, zh:`${c.thisZh}${c.zh}從我小時候就在這裡了。` }) },
+  { id:'a-sothat', cats:['object','vehicle','animal'], make: c => ({ en:`The ${c.W} ${c.isAre} so heavy that I can't carry ${c.it}.`, zh:`${c.zh}太重了，我搬不動。` }) },
+  { id:'a-if', cats:['object','food','clothes'], make: c => ({ en:`If you need ${c.A}, please just let me know.`, zh:`如果你需要${c.zh}，跟我說一聲。` }) },
+  { id:'a-forgot', cats:['object','clothes','food'], make: c => ({ en:`She was in a hurry, so she forgot to bring ${c.T}.`, zh:`她趕時間，所以忘了帶${c.zh}。` }) },
+  { id:'a-useful', cats:['object','vehicle','clothes'], make: c => ({ en:`This is the most useful ${c.W} I have ever used.`, zh:`這是我用過最實用的${c.zh}。` }) },
+  { id:'a-takecare', cats:['object','clothes','place','animal'], ok: c => !c.unc, make: c => ({ en:`We should take care of ${c.T} every day.`, zh:`我們每天都應該好好照顧${c.zh}。` }) },
+  { id:'a-notonly', cats:['object','clothes','food','vehicle'], make: c => ({ en:`Not only ${c.isAre} the ${c.W} cheap, but ${c.they} ${c.isAre} also very useful.`, zh:`${c.zh}不但便宜，而且很實用。` }) },
+  { id:'a-which', cats:['object','clothes','vehicle'], make: c => ({ en:`The ${c.W} which ${c.isAre} near the door ${c.verbBelong} to my sister.`, zh:`門邊那個${c.zh}是我妹妹的。` }) },
+  { id:'a-interested', cats:['object','vehicle'], make: c => ({ en:`He has been interested in ${c.T} for many years.`, zh:`他對${c.zh}感興趣很多年了。` }) },
+  { id:'a-hadbetter', cats:['object','vehicle','clothes'], make: c => ({ en:`You had better check ${c.T} before you leave.`, zh:`你離開前最好檢查一下${c.zh}。` }) },
+  { id:'a-inorder', cats:['object','food','clothes'], make: c => ({ en:`In order to save time, we decided to buy ${c.A}.`, zh:`為了省時間，我們決定買${c.zh}。` }) },
+  { id:'a-madeof', cats:['object'], ok: c => !c.unc && !c.pl && /table|chair|desk|bed|shelf|door|box|fence|gate|ladder|floor|roof|cabinet|drawer|basket|bowl|spoon|boat|bridge|house|bench|toy|window/.test(c.w), make: c => ({ en:`The ${c.W} is made of wood, so it is very light.`, zh:`${c.zh}是木頭做的，所以很輕。` }) },
+  { id:'a-rather', cats:['object','clothes','vehicle'], make: c => ({ en:`I would rather use ${c.T} than borrow a new one.`, zh:`我寧願用${c.zh}，也不想借新的。` }) },
+  { id:'a-unless', cats:['object','vehicle','clothes'], make: c => ({ en:`Unless you clean ${c.T}, it will get dirty soon.`, zh:`除非你清潔${c.zh}，不然很快就會髒。` }) },
+  { id:'a-themore', cats:'any', make: c => ({ en:`The more I look at ${c.T}, the more I like ${c.it}.`, zh:`我越看${c.zh}越喜歡。` }) },
+  { id:'a-eventhough', cats:['object','clothes','food','vehicle'], make: c => ({ en:`Even though ${c.T} is expensive, many people still buy ${c.it}.`, zh:`雖然${c.zh}很貴，很多人還是會買。` }) },
+  { id:'a-assoon', cats:'any', make: c => ({ en:`As soon as I saw ${c.T}, I knew it was a good choice.`, zh:`我一看到${c.zh}就知道這是個好選擇。` }) },
+  { id:'a-kept', cats:'any', make: c => ({ en:`She kept talking about ${c.T} during the whole trip.`, zh:`整趟旅行她一直在講${c.zh}。` }) },
+  { id:'a-important', cats:['object','vehicle'], make: c => ({ en:`It is important for us to learn how to use ${c.T}.`, zh:`學會怎麼用${c.zh}對我們很重要。` }) },
+  { id:'a-onethat', cats:['object','clothes','food'], ok: c => !c.pl && !c.unc, make: c => ({ en:`The ${c.W} on the table is the one that I bought yesterday.`, zh:`桌上那個${c.zh}是我昨天買的。` }) },
+  { id:'a-sothatcan', cats:['object'], make: c => ({ en:`Please move ${c.T} so that everyone can see ${c.it} clearly.`, zh:`請把${c.zh}移一下，讓大家都看得清楚。` }) },
+  { id:'a-while', cats:['person','animal'], make: c => ({ en:`The ${c.W} was resting while the children were playing.`, zh:`孩子們在玩的時候，${c.zh}在休息。` }) }
+];
+
+function pickPattern(pool, c, seed, used) {
+  const list = pool.filter(p => (p.cats === 'any' || p.cats.includes(c.cat)) && (!p.ok || p.ok(c)));
+  if (!list.length) return pool[0];
+  const start = Math.abs(seed) % list.length;
+  for (let i = 0; i < list.length; i++) {
+    const p = list[(start + i) % list.length];
+    if (!used.has(p.id)) { used.add(p.id); return p; }
+  }
+  used.clear();
+  const p = list[start];
+  used.add(p.id);
+  return p;
+}
+
+function buildExamplesForWords(list, salt) {
+  salt = salt || 0;
+  const usedB = new Set(), usedA = new Set(), seen = new Set(), out = {};
+  (list || []).forEach((it, i) => {
+    const en = String(typeof it === 'string' ? it : (it && it.en) || '').toLowerCase().trim();
+    if (!en) return;
+    const zh = typeof it === 'string' ? ((CORE_MAP.get(en) || {}).zh || '') : (it.zh || (CORE_MAP.get(en) || {}).zh || '');
+    let g = null;
+    for (let k = 0; k < 10; k++) {
+      const c = ctxFor(en, zh, salt + i * 13 + k * 29);
+      const pb = pickPattern(P_BASIC, c, hashStr(en) + salt + k * 7, usedB);
+      const pa = pickPattern(P_ADV, c, hashStr(en) + salt + k * 11 + 3, usedA);
+      const b = pb.make(c), a = pa.make(c);
+      g = { basic: b.en, basicZh: b.zh, advanced: a.en, advancedZh: a.zh, basicPattern: pb.id, advancedPattern: pa.id };
+      if (!seen.has(g.basic.toLowerCase())) break;
+    }
+    seen.add(g.basic.toLowerCase());
+    out[en] = g;
+  });
+  return out;
+}
+
+/* --- 看圖造句（離線備援，句型輪替、絕不寫 in the picture） --- */
+function buildDescriptionSentences(list) {
+  const arr = (list || []).filter(l => l && l.en);
+  if (!arr.length) return null;
+  const groups = {};
+  arr.forEach(l => { const c = classify(l.en); (groups[c] = groups[c] || []).push(l); });
+  const used = new Set();
+  const lines = [];
+  const zhOf = l => l.zh || l.en;
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const np = l => (isPluralWord(l.en) || UNCOUNTABLE.has(l.en)) ? l.en : aAn(l.en);
+  const npList = a => {
+    const parts = a.map(np);
+    return parts.length === 1 ? parts[0] : parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1];
+  };
+
+  const scene = (groups.nature || []).concat(groups.place || []);
+  if (scene.length) {
+    const s = scene.shift();
+    const adj = pickFrom(ADJ_POOL.scene, hashStr(s.en));
+    const t = pickFrom(TIME_POOL, hashStr(s.en) + 9);
+    lines.push({ en: `The ${s.en} looks ${adj.en} ${t.en}.`, zh: `${zhOf(s)}${t.zh}看起來很${adj.zh}。` });
+    used.add(s.en);
+  }
+  const things = (groups.object || []).concat(groups.clothes || [], groups.food || [], groups.vehicle || []);
+  if (things.length) {
+    const sel = things.splice(0, 4);
+    sel.forEach(l => used.add(l.en));
+    const p = pickFrom(PLACE_POOL, hashStr(sel[0].en) + 13);
+    lines.push({ en: `You can see ${npList(sel)} ${p.en}.`, zh: `在${p.zh}可以看到${sel.map(zhOf).join('、')}。` });
+  }
+  const living = (groups.person || []).concat(groups.animal || []);
+  if (living.length) {
+    const p = living.shift();
+    const isPerson = !!(groups.person && groups.person.indexOf(p) >= 0);
+    const anchor = arr.filter(l => used.has(l.en) && l !== p)[0] || arr.filter(l => l !== p)[0];
+    const v = pickFrom(isPerson ? VERB_PERSON : VERB_ANIMAL, hashStr(p.en));
+    const adj = pickFrom(isPerson ? ADJ_POOL.person : ADJ_POOL.animal, hashStr(p.en) + 3);
+    const pl = isPluralWord(p.en);
+    lines.push({
+      en: `${cap(np(p))} ${pl ? 'are' : 'is'} ${v.en} near the ${anchor ? anchor.en : 'door'}, and ${pl ? 'look' : 'looks'} ${adj.en}.`,
+      zh: `${pl ? '' : '一位'}${zhOf(p)}在${anchor ? zhOf(anchor) : '門'}旁邊${v.zh}，看起來很${adj.zh}。`
+    });
+    used.add(p.en);
+  }
+  let rest = arr.filter(l => !used.has(l.en));
+  let guard = 0;
+  while (rest.length && guard++ < 3) {
+    const sel = rest.slice(0, 4);
+    sel.forEach(l => used.add(l.en));
+    const anchor = arr.filter(l => used.has(l.en) && sel.indexOf(l) < 0)[0] || arr[0];
+    const names = sel.map(l => l.en);
+    const listStr = 'the ' + (names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1]);
+    lines.push({ en: `${listStr.charAt(0).toUpperCase() + listStr.slice(1)} ${sel.length > 1 ? 'are' : 'is'} close to the ${anchor.en} as well.`, zh: `${sel.map(zhOf).join('、')}也在${zhOf(anchor)}附近。` });
+    rest = arr.filter(l => !used.has(l.en));
+  }
+  const joined = joinSentence(lines.slice(0, 4));
+  joined.cover = coverage(joined.en, arr.map(l => l.en));
+  return joined;
+}
+
+/* --- 例句最終檢查：模板句、缺字、重複一律重寫 --- */
+function finalizeExamples() {
+  if (!labels.length) return 0;
+  const need = labels.filter(l => {
+    const b = String(l.example || ''), a = String(l.advanced || '');
+    return !b || !a || BAD_TEMPLATE.test(b) || BAD_TEMPLATE.test(a) || !containsWord(b, l.en) || !containsWord(a, l.en);
+  });
+  let filled = 0;
+  if (need.length) {
+    const gen = buildExamplesForWords(need.map(l => ({ en: l.en, zh: l.zh })));
+    need.forEach(l => {
+      const g = gen[String(l.en).toLowerCase()];
+      if (!g) return;
+      if (!l.example || BAD_TEMPLATE.test(l.example) || !containsWord(l.example, l.en)) { l.example = g.basic; l.exampleZh = g.basicZh; l.exampleIpa = ''; }
+      if (!l.advanced || BAD_TEMPLATE.test(l.advanced) || !containsWord(l.advanced, l.en)) { l.advanced = g.advanced; l.advancedZh = g.advancedZh; l.advancedIpa = ''; }
+      filled++;
+    });
+  }
+  const seen = new Set();
+  labels.forEach(l => {
+    ['example', 'advanced'].forEach(k => {
+      const s = String(l[k] || '');
+      if (seen.has(s.toLowerCase())) {
+        const g = buildExamplesForWords([{ en: l.en, zh: l.zh }], seen.size + 3)[String(l.en).toLowerCase()];
+        if (g) { l[k] = (k === 'example') ? g.basic : g.advanced; l[k + 'Zh'] = (k === 'example') ? g.basicZh : g.advancedZh; l[k + 'Ipa'] = ''; }
+      }
+      seen.add(String(l[k]).toLowerCase());
+    });
+  });
+  return filled;
+}
+
+/* --- 語塊頁 --- */
+function renderChunks() {
+  const used = new Set();
+  labels.forEach(l => { findChunks(l.example || '').forEach(c => used.add(c)); findChunks(l.advanced || '').forEach(c => used.add(c)); });
+  if (sentence) findChunks(sentence.en || '').forEach(c => used.add(c));
+  const groups = {};
+  CHUNKS.forEach(c => { (groups[c.type] = groups[c.type] || []).push(c); });
+  $('chunkStats').innerHTML = `<div class="stat-row">
+    <div class="stat"><b>${CHUNKS.length}</b><span>語塊總數</span></div>
+    <div class="stat"><b>${used.size}</b><span>目前例句用到</span></div>
+    <div class="stat"><b>${labels.length}</b><span>本次單字</span></div>
+  </div>`;
+  $('chunkList').innerHTML = Object.keys(groups).map(t => `
+    <div class="chunk-group"><h3>${esc(t)}（${groups[t].length}）</h3><div class="chunk-grid">
+      ${groups[t].map(c => `<div class="chunk ${used.has(c.en) ? 'used' : ''}" onclick="speak('${esc(c.en).replace(/'/g, "\\'")}')">
+        <div class="c-en">${esc(c.en)}${used.has(c.en) ? '<span class="c-mark">✓</span>' : ''}</div>
+        <div class="c-zh">${esc(c.zh)}</div>
+      </div>`).join('')}
+    </div></div>`).join('');
+}
+
+/* --- 檢核頁 --- */
+const DEMO_LABELS = [
+  { en:'ramp', zh:'斜坡', ipa:'/ræmp/' },
+  { en:'helmet', zh:'安全帽', ipa:'/ˈhelmɪt/' },
+  { en:'bicycle', zh:'腳踏車', ipa:'/ˈbaɪsɪkl/' },
+  { en:'tree', zh:'樹', ipa:'/triː/' },
+  { en:'rider', zh:'騎士', ipa:'/ˈraɪdər/' },
+  { en:'street', zh:'街道', ipa:'/striːt/' },
+  { en:'cloud', zh:'雲', ipa:'/klaʊd/' },
+  { en:'shadow', zh:'影子', ipa:'/ˈʃædoʊ/' },
+  { en:'backpack', zh:'背包', ipa:'/ˈbækpæk/' },
+  { en:'fence', zh:'籬笆', ipa:'/fens/' }
+];
+
+function renderCheck() {
+  $('checkStats').innerHTML = `<div class="stat-row">
+    <div class="stat"><b>${P_BASIC.length}</b><span>基礎句型</span></div>
+    <div class="stat"><b>${P_ADV.length}</b><span>進階句型</span></div>
+    <div class="stat"><b>${CHUNKS.length}</b><span>常用語塊</span></div>
+    <div class="stat"><b>${CORE_NOUNS.length}</b><span>A2-B1 核心名詞</span></div>
+    <div class="stat"><b>${labels.length}</b><span>本次標註</span></div>
+    <div class="stat"><b>${usedChunkCount()}</b><span>本次用到語塊</span></div>
+  </div>`;
+}
+
+function runSelfTest() {
+  const rows = [];
+  const add = (name, ok, detail) => rows.push({ name, ok: !!ok, detail: detail || '' });
+  try {
+    add('句庫載入', P_BASIC.length >= 20 && P_ADV.length >= 20 && CHUNKS.length >= 100 && CORE_NOUNS.length >= 250,
+      `基礎句型 ${P_BASIC.length} 組、進階句型 ${P_ADV.length} 組、語塊 ${CHUNKS.length} 條、核心名詞 ${CORE_NOUNS.length} 字`);
+
+    const k1 = LS.get('kw.groqKey'), k2 = LS.get('kw.deepseekKey');
+    LS.set('kw.groqKey', 'test-key'); LS.set('kw.deepseekKey', 'test-key');
+    const chain = buildChain('groq:qwen/qwen3.8-27b', true);
+    LS.set('kw.groqKey', k1 || ''); LS.set('kw.deepseekKey', k2 || '');
+    const chainOk = chain[0] === 'groq:qwen/qwen3.8-27b' && chain.indexOf('deepseek:deepseek-flash') > 0 && chain.indexOf('groq:openai/gpt-oss-120b') < 0;
+    add('模型自動接手鏈', chainOk && typeof toast === 'function', chain.join(' → '));
+
+    const gen = buildExamplesForWords(CORE_NOUNS);
+    const values = Object.keys(gen).map(k => gen[k]);
+    const bad = [];
+    CORE_NOUNS.forEach(n => {
+      const g = gen[n.en];
+      if (!g) { bad.push(n.en + '（無例句）'); return; }
+      const bw = g.basic.split(/\s+/).length, aw = g.advanced.split(/\s+/).length;
+      if (!containsWord(g.basic, n.en)) bad.push(n.en + '（基礎缺字）');
+      else if (!containsWord(g.advanced, n.en)) bad.push(n.en + '（進階缺字）');
+      else if (!g.basicZh || !g.advancedZh) bad.push(n.en + '（缺中文）');
+      else if (/\b(undefined|NaN)\b/.test(g.basic + g.advanced)) bad.push(n.en + '（格式錯誤）');
+      else if (bw < 5 || bw > 14) bad.push(n.en + `（基礎 ${bw} 字）`);
+      else if (aw < 9 || aw > 20) bad.push(n.en + `（進階 ${aw} 字）`);
+    });
+    add('全核心名詞產句', bad.length === 0, bad.length ? `${bad.length} 個不合格：${bad.slice(0, 8).join('、')}` : `${CORE_NOUNS.length}/${CORE_NOUNS.length} 全部通過`);
+
+    const basics = values.map(g => g.basic.toLowerCase());
+    const dup = basics.filter((s, i) => basics.indexOf(s) !== i);
+    add('例句不重複', dup.length === 0, dup.length ? `重複 ${dup.length} 句，例如「${dup[0]}」` : `${basics.length} 句全部不同`);
+
+    const allSent = [];
+    values.forEach(g => { allSent.push(g.basic, g.advanced); });
+    const templ = allSent.filter(s => BAD_TEMPLATE.test(s));
+    add('無 in the picture 模板句', templ.length === 0, templ.length ? `${templ.length} 句：${templ[0]}` : '0 句模板句');
+
+    const bp = new Set(values.map(g => g.basicPattern));
+    const ap = new Set(values.map(g => g.advancedPattern));
+    add('句型多樣性', bp.size >= 15 && ap.size >= 15, `基礎用到 ${bp.size} 種句型、進階 ${ap.size} 種`);
+
+    const chunkSet = new Set();
+    allSent.forEach(s => findChunks(s).forEach(c => chunkSet.add(c)));
+    add('常用語塊入句', chunkSet.size >= 18, `共用到 ${chunkSet.size} 條語塊`);
+
+    const demo = DEMO_LABELS.map(d => ({ en: d.en, zh: d.zh, ipa: d.ipa }));
+    const desc = buildDescriptionSentences(demo);
+    const cov = desc ? coverage(desc.en, demo.map(d => d.en)) : { used: 0, total: demo.length };
+    add('看圖造句流程', !!desc && desc.lines.length >= 2 && cov.used === cov.total && !BAD_TEMPLATE.test(desc.en),
+      desc ? `產出 ${desc.lines.length} 句，覆蓋 ${cov.used}/${cov.total} 個單字` : '沒有產出句子');
+
+    add('中文對照', values.every(g => g.basicZh && g.advancedZh), `${values.length * 2} 句都有繁體中文`);
+
+    const cjk = allSent.filter(s => /[\u4e00-\u9fff]/.test(s));
+    add('英文句不含中文', cjk.length === 0, cjk.length ? `有 ${cjk.length} 句混入中文` : '全部為英文');
+
+    add('音標格式', demo.every(d => /^\/.+\/$/.test(d.ipa)), '示範單字音標格式正確');
+
+    const bak = labels;
+    labels = demo.map(d => ({ en: d.en, zh: d.zh, ipa: d.ipa, x: .5, y: .5, free: false, example: '', advanced: '', exampleZh: '', advancedZh: '', el: null }));
+    const eg = buildExamplesForWords(labels);
+    labels.forEach(l => { const g = eg[l.en]; if (g) { l.example = g.basic; l.exampleZh = g.basicZh; l.advanced = g.advanced; l.advancedZh = g.advancedZh; } });
+    renderCards();
+    const html = $('cardsGrid').innerHTML;
+    const cardsOk = html.length > 500 && !/undefined/.test(html) && labels.every(l => html.indexOf(l.en) >= 0);
+    add('單字圖卡渲染', cardsOk, cardsOk ? `${demo.length} 張卡片正常輸出` : '卡片內容異常');
+
+    const qs = buildQuizQuestions();
+    const quizOk = qs.length >= 5 && qs.every(q => q.options.length === 4 && q.answer >= 0 && q.answer < 4 && q.options[q.answer]);
+    add('隨堂測驗流程', quizOk, `${qs.length} 題，每題 4 個選項`);
+
+    const bakSentence = sentence;
+    sentence = desc;
+    renderSentence();
+    const sentOk = $('sentenceBox').innerHTML.indexOf('undefined') < 0 && $('sentenceBox').innerHTML.indexOf(esc(desc.lines[0].en)) >= 0;
+    sentence = bakSentence;
+    renderSentence();
+    labels = bak;
+    renderCards();
+    add('句子面板渲染', sentOk, sentOk ? '句子與翻譯正常輸出' : '句子面板異常');
+  } catch (e) {
+    add('執行例外', false, e.message);
+  }
+
+  const pass = rows.filter(r => r.ok).length;
+  $('checkReport').innerHTML = `<div class="report">
+    <div class="report-head"><span>自我檢查結果</span><span class="badge ${pass === rows.length ? 'pass' : 'fail'}">${pass}/${rows.length} 通過</span></div>
+    ${rows.map(r => `<div class="report-row ${r.ok ? 'ok' : 'no'}"><span class="ico">${r.ok ? '✓' : '✗'}</span><div class="txt"><b>${esc(r.name)}</b><span>${esc(r.detail)}</span></div></div>`).join('')}
+  </div>`;
+  renderCheck();
+  setStatus(pass === rows.length ? `✓ 自我檢查全部通過（${rows.length} 項）` : `⚠ 自我檢查 ${pass}/${rows.length}，請看檢核頁`, pass === rows.length ? 'ok' : 'err');
+}
+
+/* ============================================================
+   16. 啟動
    ============================================================ */
 fillModelSelects();
 (function initTarget() { const el = $('targetCount'); const v = LS.get('kw.target'); if (v) el.value = v; el.addEventListener('change', () => { el.value = Math.max(1, Math.min(20, parseInt(el.value,10)||10)); LS.set('kw.target', el.value); }); })();
@@ -1090,3 +2096,4 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
+
