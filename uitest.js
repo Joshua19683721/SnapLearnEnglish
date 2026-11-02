@@ -144,6 +144,19 @@ function check(name, ok, detail) {
   const tAfter = api.getQuiz();
   check('輸入題：忽略大小寫與空白', tq.mode === 'type' && tAfter.answered === true && tAfter.score === Math.round(100 / tq.qs.length), `score=${tAfter.score}`);
 
+  // 9. 版面：分頁順序與句子區塊位置
+  const iVisual = html.indexOf('data-tab="visual"');
+  const iSentence = html.indexOf('data-tab="sentence"');
+  const iCards = html.indexOf('data-tab="cards"');
+  const iViewSent = html.indexOf('id="view-sentence"');
+  const iBox = html.indexOf('id="sentenceBox"');
+  const iViewCards = html.indexOf('id="view-cards"');
+  const orderOk = iVisual > 0 && iVisual < iSentence && iSentence < iCards;
+  const boxOk = iViewSent > 0 && iBox > iViewSent && iBox < iViewCards;
+  const panelHasSentence = /<div class="panel">[\s\S]*?id="sentenceBox"[\s\S]*?<\/div>\s*<\/div>\s*<!-- ============ View 2: Sentence/.test(html);
+  check('分頁順序：實景熱點 → 圖片句子 → 單字圖卡', orderOk && boxOk && !panelHasSentence,
+    `句子區塊在獨立分頁（不在辨識設定面板內）`);
+
   console.log(`\n${fail === 0 ? '全部通過' : '有失敗'}：${pass}/${pass + fail}`);
   process.exit(fail === 0 ? 0 : 1);
 })();
