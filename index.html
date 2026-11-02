@@ -99,12 +99,20 @@
   .flip-front, .flip-back { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
   .flip-front { background: #2a2e37; border: 2px solid #3b82f6; }
   .flip-back { background: #1e3a5f; border: 2px solid #fbbf24; transform: rotateY(180deg); }
-  .flip-front .f-en { font-size: 36px; font-weight: 900; color: #fff; margin-bottom: 12px; }
+  .flip-front .f-en { font-size: 36px; font-weight: 900; color: #fff; margin-bottom: 6px; }
+  .flip-front .f-ipa-front { font-size: 17px; color: #93c5fd; font-family: monospace; letter-spacing: .5px; min-height: 22px; }
+  .flip-front .f-ipa-front:empty { display: none; }
   .flip-front .f-hint { font-size: 12px; color: #9ca3af; margin-top: 16px; }
   .flip-back .f-ipa { font-size: 16px; color: #93c5fd; font-family: monospace; margin-bottom: 10px; }
   .flip-back .f-zh { font-size: 28px; font-weight: 700; color: #fbbf24; }
   .flash-controls { display: flex; gap: 12px; margin-top: 24px; align-items: center; }
   .flash-counter { font-size: 14px; color: #9ca3af; min-width: 60px; text-align: center; }
+
+  /* === 圖卡連續播放 === */
+  .cards-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .cards-toolbar .hint { font-size: 11px; color: #6b7280; line-height: 1.6; }
+  .vcard { transition: box-shadow .25s, border-color .25s; }
+  .vcard.playing { border-color: #10b981 !important; box-shadow: 0 0 0 2px #10b98155, 0 10px 28px #10b98122; }
 
   /* === View 4: Quiz === */
   #view-quiz { flex-direction: column; align-items: center; padding: 24px; overflow-y: auto; }
@@ -128,6 +136,19 @@
   .quiz-result .trophy { font-size: 48px; margin-bottom: 12px; }
   .quiz-result h3 { font-size: 22px; margin-bottom: 8px; }
   .quiz-result p { color: #9ca3af; font-size: 14px; margin-bottom: 16px; }
+
+  /* === 測驗模式切換 / 輸入題 === */
+  .quiz-mode-tabs { display: flex; gap: 6px; margin-bottom: 18px; background: #1e2128; padding: 4px; border-radius: 10px; border: 1px solid #3a3f4b; }
+  .quiz-mode-tab { flex: 1; padding: 9px 10px; border-radius: 8px; border: none; background: transparent; color: #9ca3af; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .2s; }
+  .quiz-mode-tab:hover { color: #e8e8e8; }
+  .quiz-mode-tab.active { background: #3b82f6; color: #fff; }
+  .quiz-option.sel { border-color: #3b82f6; background: #3b82f633; }
+  .quiz-hint-row { font-size: 11px; color: #6b7280; margin: 4px 0 10px; line-height: 1.6; }
+  .quiz-type-input { width: 100%; padding: 13px 14px; border-radius: 8px; border: 1px solid #4b5563; background: #1e2128; color: #e8e8e8; font-size: 17px; font-family: inherit; box-sizing: border-box; }
+  .quiz-type-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px #3b82f622; }
+  .quiz-type-input.correct { border-color: #34d399; background: #065f4633; color: #a7f3d0; }
+  .quiz-type-input.wrong { border-color: #ef4444; background: #7f1d1d33; color: #fecaca; }
+  .quiz-type-input:disabled { opacity: .85; }
 
   /* Grammar highlight in sentence */
   .grammar-box { margin-top: 12px; }
@@ -320,6 +341,12 @@
     <div>
       <h2>📇 單字圖卡</h2>
       <p class="sub">點擊喇叭按鈕發音，複習每個單字的音標與中文意思。</p>
+      <div class="cards-toolbar">
+        <button class="btn sm" id="playBasicBtn" onclick="playAllCards('basic')">🔊 連續播放：單字＋基礎例句</button>
+        <button class="btn sm" id="playAdvBtn" onclick="playAllCards('advanced')">🔊 連續播放：單字＋進階例句</button>
+        <button class="btn sm gray" id="playStopBtn" onclick="stopPlayAll(true)" style="display:none">⏹ 停止</button>
+        <span class="hint" id="playHint"></span>
+      </div>
       <div id="cardsGrid" class="cards-grid">
         <div class="empty" style="grid-column:1/-1">請先上傳圖片並自動辨識</div>
       </div>
@@ -335,6 +362,7 @@
         <div class="flip-card-inner">
           <div class="flip-front">
             <div class="f-en" id="fcWord" style="cursor:pointer" onclick="event.stopPropagation();speak($('fcWord').textContent)" title="點擊發音">Word</div>
+            <div class="f-ipa-front" id="fcIpaFront"></div>
             <div class="f-hint">點擊卡片翻面查看答案 · 點擊單字發音</div>
           </div>
           <div class="flip-back">
@@ -362,6 +390,10 @@
   <!-- ============ View 4: Quiz ============ -->
   <div id="view-quiz" class="view">
     <div class="quiz-box">
+      <div class="quiz-mode-tabs">
+        <button class="quiz-mode-tab active" id="modeChoice" onclick="setQuizMode('choice')">📋 選擇題</button>
+        <button class="quiz-mode-tab" id="modeType" onclick="setQuizMode('type')">⌨️ 輸入單字</button>
+      </div>
       <div class="quiz-progress-bar">
         <div class="quiz-progress-fill" id="quizProgress" style="width:0%"></div>
       </div>
@@ -465,6 +497,7 @@ let fcIndex = 0;
 let quizIndex = 0;
 let quizScore = 0;
 let quizQuestions = [];
+let playToken = 0, playRunning = false, playModeNow = '';
 
 const VLM_DEFAULT = 'qwen3.5:4b';
 const TEXT_DEFAULT = 'qwen2.5:7b';
@@ -510,6 +543,7 @@ function hideErrorBanner() { const el = $('errBanner'); if (el) { el.style.displ
    ============================================================ */
 function switchTab(tab) {
   currentTab = tab;
+  if (tab !== 'cards' && typeof playRunning !== 'undefined' && playRunning) stopPlayAll(false);
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   $('view-' + tab).classList.add('active');
@@ -1509,6 +1543,7 @@ function renderGrammar() {
    10. 單字圖卡 View
    ============================================================ */
 function renderCards() {
+  if (playRunning) stopPlayAll(false);
   const grid = $('cardsGrid');
   if (!labels.length) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1">請先上傳圖片並自動辨識</div>'; return; }
   grid.innerHTML = labels.map(l => `
@@ -1540,24 +1575,130 @@ function renderCards() {
 }
 
 /* ============================================================
+   10-2 圖卡連續播放：單字 → 例句 → 下一張
+   ============================================================ */
+const waitMs = (ms) => new Promise(r => setTimeout(r, ms));
+
+/* 單句朗讀，等它真的念完才繼續（含不觸發 onend 的保險） */
+function utterAsync(text, rate) {
+  const t = String(text || '').trim();
+  if (!t) return Promise.resolve();
+  const p = new Promise((resolve) => {
+    try {
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = 'en-US';
+      u.rate = rate || speechRate;
+      u.onend = () => resolve();
+      u.onerror = () => resolve();
+      speechSynthesis.speak(u);
+    } catch (e) { resolve(); }
+  });
+  const guard = Math.min(20000, 2200 + t.length * 130);
+  return Promise.race([p, waitMs(guard)]);
+}
+
+function setPlayUI(on, mode) {
+  const b = $('playBasicBtn'), a = $('playAdvBtn'), s = $('playStopBtn'), h = $('playHint');
+  if (b) b.textContent = (on && mode === 'basic') ? '⏸ 停止播放' : '🔊 連續播放：單字＋基礎例句';
+  if (a) a.textContent = (on && mode === 'advanced') ? '⏸ 停止播放' : '🔊 連續播放：單字＋進階例句';
+  if (s) s.style.display = on ? 'inline-block' : 'none';
+  if (h) h.textContent = on ? '播放中…（再按一次可停止）' : '';
+}
+
+function highlightCard(i) {
+  const grid = $('cardsGrid');
+  if (!grid || !grid.children) return;
+  for (let k = 0; k < grid.children.length; k++) {
+    const el = grid.children[k];
+    if (el.classList) el.classList.remove('playing');
+  }
+  const el = grid.children[i];
+  if (el && el.classList) {
+    el.classList.add('playing');
+    try { if (el.scrollIntoView) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+  }
+}
+
+function clearCardHighlight() {
+  const grid = $('cardsGrid');
+  if (!grid || !grid.children) return;
+  for (let k = 0; k < grid.children.length; k++) {
+    if (grid.children[k].classList) grid.children[k].classList.remove('playing');
+  }
+}
+
+function stopPlayAll(showToast) {
+  const was = playRunning;
+  playToken++;
+  playRunning = false; playModeNow = '';
+  try { speechSynthesis.cancel(); } catch (e) {}
+  setPlayUI(false, '');
+  clearCardHighlight();
+  if (showToast && was) toast('已停止播放', 'ok', 1600);
+}
+
+async function playAllCards(mode) {
+  if (!labels.length) { toast('請先上傳圖片並自動辨識', 'err'); return; }
+  if (typeof speechSynthesis === 'undefined' || typeof SpeechSynthesisUtterance === 'undefined') {
+    toast('此瀏覽器不支援語音播放', 'err', 3000); return;
+  }
+  const key = mode === 'advanced' ? 'advanced' : 'basic';
+  if (playRunning) {
+    const same = playModeNow === key;
+    stopPlayAll(false);
+    if (same) { toast('已停止播放', 'ok', 1500); return; }
+    await waitMs(120);
+  }
+  const hasSent = labels.some(l => key === 'advanced' ? l.advanced : l.example);
+  if (!hasSent) { toast(key === 'advanced' ? '目前沒有進階例句可播放' : '目前沒有基礎例句可播放', 'err'); return; }
+
+  const token = ++playToken;
+  playRunning = true; playModeNow = key;
+  setPlayUI(true, key);
+  try { speechSynthesis.cancel(); } catch (e) {}
+  await waitMs(80);
+
+  for (let i = 0; i < labels.length; i++) {
+    if (token !== playToken) return;
+    const l = labels[i];
+    highlightCard(i);
+    await utterAsync(l.en);
+    if (token !== playToken) return;
+    const sent = key === 'advanced' ? l.advanced : l.example;
+    if (sent) {
+      await waitMs(220);
+      if (token !== playToken) return;
+      await utterAsync(sent);
+    }
+    if (token !== playToken) return;
+    await waitMs(280);
+  }
+  if (token === playToken) {
+    playRunning = false; playModeNow = '';
+    setPlayUI(false, '');
+    clearCardHighlight();
+    toast('播放完畢', 'ok', 1800);
+  }
+}
+
+/* ============================================================
    11. 翻卡 View
    ============================================================ */
 function flipCard() { $('flipCard').classList.toggle('flipped'); }
 function updateFlashcard() {
   const card = $('flipCard'); card.classList.remove('flipped');
-  if (!labels.length) { $('fcWord').textContent = '無單字'; $('fcIpa').textContent = ''; $('fcZh').textContent = '請先辨識'; $('fcCounter').textContent = '0 / 0'; $('fcExampleEn').textContent = ''; $('fcExampleZh').textContent = ''; $('fcAdvancedEn').textContent = ''; $('fcAdvancedZh').textContent = ''; return; }
+  if (!labels.length) { $('fcWord').textContent = '無單字'; $('fcIpaFront').textContent = ''; $('fcIpa').textContent = ''; $('fcZh').textContent = '請先辨識'; $('fcCounter').textContent = '0 / 0'; $('fcExampleEn').textContent = ''; $('fcExampleZh').textContent = ''; $('fcAdvancedEn').textContent = ''; $('fcAdvancedZh').textContent = ''; return; }
   if (fcIndex >= labels.length) fcIndex = 0;
   const l = labels[fcIndex];
-  setTimeout(() => {
-    $('fcWord').textContent = l.en;
-    $('fcIpa').textContent = l.ipa || '';
-    $('fcZh').textContent = l.zh || '';
-    $('fcExampleEn').textContent = l.example || '';
-    $('fcExampleZh').textContent = l.exampleZh || '';
-    $('fcAdvancedEn').textContent = l.advanced || '';
-    $('fcAdvancedZh').textContent = l.advancedZh || '';
-    $('fcCounter').textContent = (fcIndex+1) + ' / ' + labels.length;
-  }, 150);
+  $('fcWord').textContent = l.en;
+  $('fcIpaFront').textContent = l.ipa || '';
+  $('fcIpa').textContent = l.ipa || '';
+  $('fcZh').textContent = l.zh || '';
+  $('fcExampleEn').textContent = l.example || '';
+  $('fcExampleZh').textContent = l.exampleZh || '';
+  $('fcAdvancedEn').textContent = l.advanced || '';
+  $('fcAdvancedZh').textContent = l.advancedZh || '';
+  $('fcCounter').textContent = (fcIndex+1) + ' / ' + labels.length;
   // 例句點擊發音
   $('fcExampleEn').onclick = (e) => { e.stopPropagation(); if (l.example) speak(l.example); };
   $('fcAdvancedEn').onclick = (e) => { e.stopPropagation(); if (l.advanced) speak(l.advanced); };
@@ -1568,92 +1709,186 @@ function prevFlashcard() { if (labels.length) { fcIndex = (fcIndex - 1 + labels.
 /* ============================================================
    12. 隨堂小測 View
    ============================================================ */
+let quizMode = LS.get('kw.quizMode') || 'choice';   // 'choice' 選擇題（預設）｜'type' 輸入單字
+
+function updateModeTabs() {
+  const c = $('modeChoice'), t = $('modeType');
+  if (c) c.classList.toggle('active', quizMode === 'choice');
+  if (t) t.classList.toggle('active', quizMode === 'type');
+}
+
+function setQuizMode(mode) {
+  if (mode !== 'choice' && mode !== 'type') return;
+  if (quizMode === mode) return;
+  quizMode = mode;
+  LS.set('kw.quizMode', mode);
+  updateModeTabs();
+  if (labels.length >= 3) {
+    startQuiz();
+    toast(mode === 'choice' ? '已切換為選擇題，重新開始' : '已切換為輸入單字，重新開始', 'ok', 2200);
+  }
+}
+
 function startQuiz() {
   if (labels.length < 3) { toast('至少需要 3 個單字才能測驗', 'err'); return; }
-  quizIndex = 0; quizScore = 0;
+  quizIndex = 0; quizScore = 0; quizAnswered = false; selectedOption = null;
   $('quizContent').style.display = ''; $('quizResult').style.display = 'none';
+  updateModeTabs();
   quizQuestions = buildQuizQuestions();
   renderQuizQuestion();
 }
 
 function buildQuizQuestions() {
-  const qs = [];
   const pool = labels.slice(0, 10);
-  pool.forEach((correct, i) => {
+  return pool.map((correct, i) => {
+    const ipa = correct.ipa || '';
+    if (quizMode === 'type') {
+      return {
+        mode: 'type',
+        prompt: `請輸入「${correct.zh}」的英文單字`,
+        word: correct.en, zh: correct.zh, ipa,
+        answer: correct.en,
+        explain: `${correct.en} ${ipa} = ${correct.zh}`
+      };
+    }
     const others = labels.filter(l => l !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
     if (i % 2 === 0) {
       const opts = [correct.zh, ...others.map(l => l.zh)].sort(() => Math.random() - 0.5);
-      qs.push({ q: `「${correct.en}」的中文意思是？`, options: opts, answer: opts.indexOf(correct.zh), explain: `${correct.en} ${correct.ipa} = ${correct.zh}` });
-    } else {
-      const opts = [correct.en, ...others.map(l => l.en)].sort(() => Math.random() - 0.5);
-      qs.push({ q: `「${correct.zh}」的英文是？`, options: opts, answer: opts.indexOf(correct.en), explain: `${correct.zh} = ${correct.en} ${correct.ipa}` });
+      return { mode: 'choice', dir: 'en2zh', prompt: `「${correct.en}」的中文意思是？`, word: correct.en, zh: correct.zh, options: opts, answer: opts.indexOf(correct.zh), explain: `${correct.en} ${ipa} = ${correct.zh}` };
     }
+    const opts = [correct.en, ...others.map(l => l.en)].sort(() => Math.random() - 0.5);
+    return { mode: 'choice', dir: 'zh2en', prompt: `「${correct.zh}」的英文是？`, word: correct.en, zh: correct.zh, options: opts, answer: opts.indexOf(correct.en), explain: `${correct.zh} = ${correct.en} ${ipa}` };
   });
-  return qs;
 }
 
 let selectedOption = null;
+let quizAnswered = false;
+
+function ensureConfirmBtn() {
+  let btn = $('quizConfirmBtn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'quizConfirmBtn';
+    btn.className = 'btn';
+    btn.style.cssText = 'width:100%;margin-top:12px;padding:12px;font-size:15px;display:none';
+    btn.textContent = '✓ 確認送出';
+    btn.onclick = confirmAnswer;
+    $('quizOptions').parentNode.insertBefore(btn, $('quizFeedback'));
+  }
+  return btn;
+}
 
 function renderQuizQuestion() {
   const q = quizQuestions[quizIndex];
-  selectedOption = null;
-  $('quizQNum').textContent = `問題 ${quizIndex+1} / ${quizQuestions.length}`;
+  selectedOption = null; quizAnswered = false;
+  $('quizQNum').textContent = `問題 ${quizIndex + 1} / ${quizQuestions.length}`;
   $('quizScore').textContent = `得分: ${quizScore}`;
-  $('quizQuestion').textContent = q.q;
   $('quizProgress').style.width = (quizIndex / quizQuestions.length * 100) + '%';
   const oc = $('quizOptions'); oc.innerHTML = '';
-  $('quizFeedback').className = 'quiz-feedback'; $('quizFeedback').textContent = '';
+  $('quizFeedback').className = 'quiz-feedback'; $('quizFeedback').innerHTML = '';
   $('quizNextBtn').classList.remove('show');
-  // 加入確認答案按鈕
-  let confirmBtn = $('quizConfirmBtn');
-  if (!confirmBtn) {
-    confirmBtn = document.createElement('button');
-    confirmBtn.id = 'quizConfirmBtn';
-    confirmBtn.className = 'btn';
-    confirmBtn.style.cssText = 'width:100%;margin-top:12px;padding:12px;font-size:15px;display:none';
-    confirmBtn.textContent = '✓ 確認答案';
-    confirmBtn.onclick = confirmAnswer;
-    oc.parentNode.insertBefore(confirmBtn, $('quizFeedback'));
-  }
+  const confirmBtn = ensureConfirmBtn();
   confirmBtn.style.display = 'none';
-  q.options.forEach((opt, idx) => {
-    const b = document.createElement('button');
-    b.className = 'quiz-option'; b.textContent = opt;
-    b.onclick = () => selectOption(idx);
-    oc.appendChild(b);
-  });
+  confirmBtn.textContent = '✓ 確認送出';
+  $('quizQuestion').textContent = q.prompt;
+
+  if (q.mode === 'type') {
+    oc.innerHTML = `<input id="quizTypeInput" class="quiz-type-input" placeholder="輸入英文單字…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="quiz-hint-row">拼好單字後按 Enter 或「確認送出」驗證</div>`;
+    confirmBtn.style.display = 'block';
+    const inp = $('quizTypeInput');
+    if (inp) {
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); confirmAnswer(); }
+      });
+      setTimeout(() => { try { inp.focus(); } catch (e) {} }, 80);
+    }
+  } else {
+    q.options.forEach((opt, idx) => {
+      const b = document.createElement('button');
+      b.className = 'quiz-option'; b.textContent = opt;
+      b.onclick = () => selectOption(idx);
+      oc.appendChild(b);
+    });
+    const hint = document.createElement('div');
+    hint.className = 'quiz-hint-row';
+    hint.textContent = '點選答案後還能改選其他選項，按「確認送出」才算作答';
+    oc.appendChild(hint);
+  }
 }
 
+/* 可重複改選：還沒送出前，點哪個就換哪個 */
 function selectOption(idx) {
-  if (selectedOption !== null) return; // 已經選過就不能再選
+  if (quizAnswered) return;
+  const q = quizQuestions[quizIndex];
+  if (!q || q.mode !== 'choice') return;
+  if (idx < 0 || idx >= q.options.length) return;
   selectedOption = idx;
   const opts = $('quizOptions').children;
-  for (let i = 0; i < opts.length; i++) {
-    if (i === idx) {
-      opts[i].style.borderColor = '#3b82f6';
-      opts[i].style.background = '#3b82f633';
-    } else {
-      opts[i].style.opacity = '0.5';
-    }
+  const n = Math.min(q.options.length, opts.length);
+  for (let i = 0; i < n; i++) {
+    if (opts[i].classList) opts[i].classList.toggle('sel', i === idx);
   }
-  $('quizConfirmBtn').style.display = 'block';
+  const cb = $('quizConfirmBtn');
+  if (cb) cb.style.display = 'block';
+}
+
+function normAnswer(s) {
+  return String(s || '').toLowerCase().trim()
+    .replace(/[\u2018\u2019\u02bc]/g, "'")
+    .replace(/[^a-z' ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function confirmAnswer() {
-  if (selectedOption === null) return;
+  if (quizAnswered) return;
   const q = quizQuestions[quizIndex];
-  const opts = $('quizOptions').children;
-  $('quizConfirmBtn').style.display = 'none';
-  for (let b of opts) b.disabled = true;
+  if (!q) return;
   const fb = $('quizFeedback');
-  if (selectedOption === q.answer) {
-    quizScore += Math.round(100 / quizQuestions.length);
-    opts[selectedOption].classList.add('correct');
-    fb.className = 'quiz-feedback show good'; fb.innerHTML = `✓ 答對了！${q.explain}`;
+  const cb = $('quizConfirmBtn');
+  const gain = Math.round(100 / quizQuestions.length);
+
+  if (q.mode === 'type') {
+    const inp = $('quizTypeInput');
+    if (!inp) return;
+    const val = normAnswer(inp.value);
+    if (!val) { toast('請先輸入答案', 'warn', 1600); try { inp.focus(); } catch (e) {} return; }
+    quizAnswered = true;
+    inp.disabled = true;
+    if (cb) cb.style.display = 'none';
+    if (val === normAnswer(q.answer)) {
+      quizScore += gain;
+      inp.classList.add('correct');
+      fb.className = 'quiz-feedback show good';
+      fb.innerHTML = `✓ 答對了！${esc(q.explain)}`;
+    } else {
+      inp.classList.add('wrong');
+      fb.className = 'quiz-feedback show bad';
+      fb.innerHTML = `✗ 答錯了！正確答案：<b>${esc(q.answer)}</b><br>${esc(q.explain)}`;
+    }
   } else {
-    opts[selectedOption].classList.add('wrong');
-    opts[q.answer].classList.add('correct');
-    fb.className = 'quiz-feedback show bad'; fb.innerHTML = `✗ 答錯了！正確答案：${q.options[q.answer]}<br>${q.explain}`;
+    if (selectedOption === null) { toast('請先選一個答案', 'warn', 1600); return; }
+    quizAnswered = true;
+    if (cb) cb.style.display = 'none';
+    const opts = $('quizOptions').children;
+    const n = Math.min(q.options.length, opts.length);
+    for (let i = 0; i < n; i++) {
+      const b = opts[i];
+      if (b.classList) b.classList.remove('sel');
+      b.disabled = true;
+    }
+    if (selectedOption === q.answer) {
+      quizScore += gain;
+      opts[selectedOption].classList.add('correct');
+      fb.className = 'quiz-feedback show good';
+      fb.innerHTML = `✓ 答對了！${esc(q.explain)}`;
+    } else {
+      opts[selectedOption].classList.add('wrong');
+      opts[q.answer].classList.add('correct');
+      fb.className = 'quiz-feedback show bad';
+      fb.innerHTML = `✗ 答錯了！正確答案：<b>${esc(q.options[q.answer])}</b><br>${esc(q.explain)}`;
+    }
   }
   $('quizScore').textContent = `得分: ${quizScore}`;
   $('quizNextBtn').classList.add('show');
@@ -1661,12 +1896,14 @@ function confirmAnswer() {
 
 function nextQuestion() {
   quizIndex++;
+  selectedOption = null; quizAnswered = false;
   if (quizIndex < quizQuestions.length) renderQuizQuestion();
   else {
     $('quizProgress').style.width = '100%';
     $('quizContent').style.display = 'none';
     $('quizResult').style.display = '';
-    $('quizResultText').textContent = `您的最終得分為 ${quizScore} 分！${quizScore >= 80 ? '太棒了，你是單字達人！' : '加油，再複習一下吧！'}`;
+    const modeTxt = quizMode === 'type' ? '輸入單字' : '選擇題';
+    $('quizResultText').textContent = `（${modeTxt}）您的最終得分為 ${quizScore} 分！${quizScore >= 80 ? '太棒了，你是單字達人！' : '加油，再複習一下吧！'}`;
   }
 }
 
@@ -1676,6 +1913,7 @@ function nextQuestion() {
 function onRate(v) { speechRate = parseFloat(v); $('rateVal').textContent = v + 'x'; }
 function speak(text) {
   if (!text) return;
+  if (playRunning) stopPlayAll(false);   // 單句發音會打斷連續播放
   try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = speechRate; speechSynthesis.speak(u); } catch(e) { toast('瀏覽器不支援發音', 'err'); }
 }
 
@@ -2395,9 +2633,57 @@ function runSelfTest() {
     const cardsOk = html.length > 500 && !/undefined/.test(html) && labels.every(l => html.indexOf(l.en) >= 0);
     add('單字圖卡渲染', cardsOk, cardsOk ? `${demo.length} 張卡片正常輸出` : '卡片內容異常');
 
+    const savedMode = quizMode;
+    quizMode = 'choice';
     const qs = buildQuizQuestions();
-    const quizOk = qs.length >= 5 && qs.every(q => q.options.length === 4 && q.answer >= 0 && q.answer < 4 && q.options[q.answer]);
+    const quizOk = qs.length >= 5 && qs.every(q => q.options && q.options.length === 4 && q.answer >= 0 && q.answer < 4 && q.options[q.answer]);
     add('隨堂測驗流程', quizOk, `${qs.length} 題，每題 4 個選項`);
+
+    // --- 翻卡音標 ---
+    updateFlashcard();
+    const fcIpa = $('fcIpaFront').textContent;
+    const fcOk = !!fcIpa && fcIpa === labels[0].ipa && $('fcWord').textContent === labels[0].en;
+    add('翻卡正面音標', fcOk, fcOk ? `${labels[0].en} ${fcIpa}` : '翻卡正面沒有顯示音標');
+
+    // --- 圖卡連續播放（結構 + 序列） ---
+    const playApiOk = typeof playAllCards === 'function' && typeof stopPlayAll === 'function'
+      && typeof utterAsync === 'function' && !!$('playBasicBtn') && !!$('playAdvBtn');
+    setPlayUI(true, 'basic');
+    const uiOn = /播放中/.test($('playHint').textContent);
+    setPlayUI(false, '');
+    const uiOff = $('playHint').textContent === '';
+    add('圖卡連續播放', playApiOk && uiOn && uiOff,
+      playApiOk ? '基礎／進階兩顆喇叭＋停止鈕就緒（單字→例句→下一張）' : '播放控制項缺少');
+
+    // --- 測驗雙模式 ---
+    quizMode = 'type';
+    const qsType = buildQuizQuestions();
+    const typeOk = qsType.length >= 5 && qsType.every(q => q.mode === 'type' && !!q.answer && !q.options);
+    quizMode = savedMode;
+    add('測驗模式切換', typeOk && (savedMode === 'choice' || savedMode === 'type'),
+      `選擇題 ${qs.length} 題、輸入題 ${qsType.length} 題（預設選擇題，可切換）`);
+
+    // --- 選擇題可改選（送出前） ---
+    quizMode = 'choice'; startQuiz();
+    selectOption(0);
+    const first = selectedOption;
+    selectOption(2);
+    const changed = selectedOption === 2 && quizAnswered === false;
+    const selMarks = [...$('quizOptions').children].filter(b => b.classList && b.classList.contains('sel')).length;
+    const changeOk = first === 0 && changed && selMarks === 1;
+    add('選擇題可改選', changeOk, changeOk ? '送出前可重複改選，只保留一個選取' : `選取狀態異常（first=${first}, now=${selectedOption}, marks=${selMarks}）`);
+
+    // --- 輸入題驗證 ---
+    quizMode = 'type'; startQuiz();
+    const typeQ = quizQuestions[0];
+    const inp = $('quizTypeInput');
+    inp.value = '  ' + typeQ.answer.toUpperCase() + '  ';
+    const before = quizScore;
+    confirmAnswer();
+    const typePass = quizAnswered === true && quizScore === before + Math.round(100 / quizQuestions.length)
+      && normAnswer('  Apple. ') === 'apple' && normAnswer("don't") === "don't";
+    add('輸入題驗證', typePass, typePass ? '大小寫／前後空白／標點都能正確判定' : '輸入判定異常');
+    quizMode = savedMode;
 
     const bakSentence = sentence;
     sentence = desc;
@@ -2407,6 +2693,9 @@ function runSelfTest() {
     renderSentence();
     labels = bak;
     renderCards();
+    // 自我檢查動過測驗狀態，還原成「用目前單字重新出題」
+    quizQuestions = []; quizIndex = 0; quizScore = 0; selectedOption = null; quizAnswered = false;
+    if (currentTab === 'quiz' && labels.length >= 3) startQuiz();
     add('句子面板渲染', sentOk, sentOk ? '句子與翻譯正常輸出' : '句子面板異常');
   } catch (e) {
     add('執行例外', false, e.message);
@@ -2427,6 +2716,7 @@ function runSelfTest() {
 fillModelSelects();
 (function initTarget() { const el = $('targetCount'); const v = LS.get('kw.target'); if (v) el.value = v; el.addEventListener('change', () => { el.value = Math.max(1, Math.min(20, parseInt(el.value,10)||10)); LS.set('kw.target', el.value); }); })();
 setStatus('待命');
+updateModeTabs();
 
 // PWA Service Worker 註冊
 if ('serviceWorker' in navigator) {
