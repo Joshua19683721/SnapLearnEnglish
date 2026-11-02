@@ -177,6 +177,17 @@
   .err-banner b { color: #fecaca; display: block; margin-bottom: 4px; font-size: 13px; }
   .err-banner .row { display: flex; gap: 8px; margin-top: 8px; }
   .chain-hint { font-size: 11px; color: #6b7280; line-height: 1.7; margin-top: -2px; }
+
+  /* === 相機取景（720p 直接擷取，不落地大檔） === */
+  .cam-mask { position: fixed; inset: 0; background: #000d; z-index: 9998; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; }
+  .cam-mask video { max-width: 100%; max-height: 72vh; border-radius: 12px; background: #000; box-shadow: 0 12px 40px #000a; }
+  .cam-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .cam-bar .btn { min-width: 88px; }
+  .cam-shot { width: 68px; height: 68px; border-radius: 50%; border: 4px solid #fff; background: #ef4444; cursor: pointer; box-shadow: 0 4px 16px #000a; }
+  .cam-shot:active { transform: scale(.94); }
+  .cam-hint { color: #d1d5db; font-size: 12px; text-align: center; line-height: 1.6; }
+  .img-meta { font-size: 11px; color: #6b7280; text-align: center; padding: 6px 0 0; line-height: 1.6; }
+  .img-meta b { color: #10b981; font-weight: 600; }
   .chain-hint b { color: #9ca3af; }
 
   /* === Mobile Responsive === */
@@ -227,7 +238,7 @@
   <input type="file" id="file" accept="image/*" hidden>
   <input type="file" id="camera" accept="image/*" capture="environment" hidden>
   <button class="btn" onclick="document.getElementById('file').click()">📂 選擇圖片</button>
-  <button class="btn" onclick="document.getElementById('camera').click()">📷 拍照</button>
+  <button class="btn" onclick="openCamera()">📷 拍照</button>
   <button class="btn" id="autoBtn" onclick="autoLabel()">🤖 自動辨識</button>
   <button class="btn gray" id="verifyBtn" onclick="verifyLabels()">🔍 驗證</button>
   <button class="btn gray" onclick="exportPNG()">⬇️ 匯出 PNG</button>
@@ -250,6 +261,7 @@
   <div id="view-visual" class="view active">
     <div class="stage-wrap">
       <div id="stage"><img id="img" alt=""></div>
+      <div class="img-meta" id="imgMeta"></div>
     </div>
     <div class="panel">
       <h2>辨識設定</h2>
@@ -510,36 +522,330 @@ function switchTab(tab) {
 }
 
 /* ============================================================
-   3. 圖片載入
+   3. 圖片載入（相機原圖 → 720p / 100–200KB）
+   ------------------------------------------------------------
+   手機後置鏡頭一張 12MP 照片：解碼後佔約 48MB RAM，轉 dataURL 再翻一倍。
+   這裡改成：createImageBitmap 解碼 → canvas 縮到 720p → JPEG 反覆試品質
+   → 只保留 100–200KB 的 Blob，全程不產生巨型 base64 字串。
    ============================================================ */
+const IMG_MAX_SIDE = 1280;          // 720p = 長邊 1280
+const IMG_TARGET_MAX = 200 * 1024;  // 上限 200KB
+const IMG_TARGET_MIN = 100 * 1024;  // 盡量不低於 100KB（太低字會糊）
+const VLM_MAX_SIDE = 1024;          // 丟給 VLLM 的長邊
+const VLM_TARGET_BYTES = 180 * 1024;
+let currentImage = null;            // { blob, width, height, bytes, quality, url, from }
+let vlmThumbCache = null;           // { b64, bytes, w, h }
+
 fileInput.addEventListener('change', handleFile);
 $('camera').addEventListener('change', handleFile);
-function handleFile(e) {
-  const f = e.target.files[0]; if (!f) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const tmpImg = new Image();
-    tmpImg.onload = () => {
-      // 壓縮到 720p（最長邊 1280px）
-      const MAX_W = 1280, MAX_H = 1280;
-      let w = tmpImg.width, h = tmpImg.height;
-      if (w > h && w > MAX_W) { h = h * MAX_W / w; w = MAX_W; }
-      else if (h > MAX_H) { w = w * MAX_H / h; h = MAX_H; }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(tmpImg, 0, 0, w, h);
-      img.onload = () => {
-        labels.forEach(l => l.el.remove()); labels = []; selected = null; sentence = null; grammar = null;
-        renderEditor(); renderSentence(); renderGrammar();
-        setStatus(`已載入 ${w}×${h} (720p)`, 'ok');
-      };
-      img.src = canvas.toDataURL('image/jpeg', 0.85);
+
+/* 3-1 解碼：優先 createImageBitmap（可帶 EXIF 方向、在背景執行緒解碼） */
+async function decodeImageFile(file) {
+  if (typeof createImageBitmap === 'function') {
+    try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (e) {}
+    try { return await createImageBitmap(file); } catch (e) {}
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const el = new Image();
+    await new Promise((res, rej) => {
+      el.onload = res;
+      el.onerror = () => rej(new Error('圖片無法解碼（格式不支援）'));
+      el.src = url;
+    });
+    if (el.decode) { try { await el.decode(); } catch (e) {} }
+    return el;
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+}
+
+/* 3-2 canvas → Blob（含 Safari 舊版 fallback） */
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve) => {
+    if (canvas.toBlob) {
+      canvas.toBlob(b => resolve(b), type, quality);
+      return;
+    }
+    try {
+      const d = canvas.toDataURL(type, quality);
+      const bin = atob(d.split(',')[1]);
+      const u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      resolve(new Blob([u8], { type }));
+    } catch (e) { resolve(null); }
+  });
+}
+
+/* 3-3 在指定尺寸下試不同品質，挑最接近目標大小的那一張 */
+async function encodeWithinBudget(src, maxSide, opt) {
+  const o = Object.assign({ targetMax: IMG_TARGET_MAX, targetMin: IMG_TARGET_MIN, startQ: 0.85, minQ: 0.55, type: 'image/jpeg' }, opt || {});
+  let side = Math.min(maxSide, Math.max(src.width, src.height));
+  let best = null;
+
+  for (let dimTry = 0; dimTry < 4; dimTry++) {
+    const scale = Math.min(1, side / Math.max(src.width, src.height));
+    const w = Math.max(1, Math.round(src.width * scale));
+    const h = Math.max(1, Math.round(src.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(src, 0, 0, w, h);
+
+    // 由高到低試品質；一旦進到目標區間就停
+    let q = o.startQ;
+    let smallest = null;
+    while (q >= o.minQ - 1e-6) {
+      const blob = await canvasToBlob(canvas, o.type, q);
+      if (!blob) break;
+      const cand = { blob, width: w, height: h, quality: Math.round(q * 100) / 100, side: Math.max(w, h) };
+      if (!best || blob.size < best.blob.size) best = cand;
+      if (!smallest || blob.size < smallest.blob.size) smallest = cand;
+      if (blob.size <= o.targetMax) {
+        // 已在預算內：若偏小且品質還有空間，再往上補一次
+        if (blob.size < o.targetMin && q < 0.92) {
+          const better = await canvasToBlob(canvas, o.type, Math.min(0.92, q + 0.07));
+          if (better && better.size <= o.targetMax) {
+            const c2 = { blob: better, width: w, height: h, quality: Math.round(Math.min(0.92, q + 0.07) * 100) / 100, side: Math.max(w, h) };
+            if (better.size > blob.size) return c2;
+          }
+        }
+        return cand;
+      }
+      q -= 0.08;
+    }
+    // 這個尺寸壓不下來 → 縮小邊長再試
+    if (!smallest) break;
+    best = smallest;
+    side = Math.round(side * 0.8);
+  }
+  return best;
+}
+
+/* 3-4 對外主函式：把相機/相簿的大檔壓成 VLLM 吃得下的乾淨 JPEG */
+async function resizeImageForVllm(file, maxDimension, quality) {
+  const maxSide = maxDimension || IMG_MAX_SIDE;
+  const out = await prepareImage(file, { maxSide, startQ: quality || 0.85 });
+  const name = (file && file.name && /\.(jpe?g|png|webp)$/i.test(file.name))
+    ? file.name.replace(/\.(jpe?g|png|webp)$/i, '.jpg')
+    : `vllm_upload_${Date.now()}.jpg`;
+  return new File([out.blob], name, { type: 'image/jpeg', lastModified: Date.now() });
+}
+
+async function prepareImage(file, opt) {
+  const o = Object.assign({ maxSide: IMG_MAX_SIDE, startQ: 0.85, targetMax: IMG_TARGET_MAX, targetMin: IMG_TARGET_MIN }, opt || {});
+  const src = await decodeImageFile(file);
+  try {
+    const got = await encodeWithinBudget(src, o.maxSide, {
+      targetMax: o.targetMax, targetMin: o.targetMin, startQ: o.startQ
+    });
+    if (!got || !got.blob) throw new Error('圖片壓縮失敗');
+    return {
+      blob: got.blob,
+      width: got.width,
+      height: got.height,
+      quality: got.quality,
+      bytes: got.blob.size,
+      originalBytes: (file && file.size) || 0,
+      from: (file && file.name) || 'camera'
     };
-    tmpImg.src = ev.target.result;
+  } finally {
+    if (src && src.close) { try { src.close(); } catch (e) {} }
+  }
+}
+
+/* 3-5 顯示 + 重建 VLLM 縮圖快取 */
+function applyImage(out) {
+  if (currentImage && currentImage.url) { try { URL.revokeObjectURL(currentImage.url); } catch (e) {} }
+  const url = URL.createObjectURL(out.blob);
+  currentImage = { blob: out.blob, width: out.width, height: out.height, bytes: out.bytes, quality: out.quality, originalBytes: out.originalBytes, url, from: out.from };
+  vlmThumbCache = null;
+  img.onload = () => {
+    labels.forEach(l => l.el.remove()); labels = []; selected = null; sentence = null; grammar = null;
+    renderEditor(); renderSentence(); renderGrammar();
+    const kb = Math.round(out.bytes / 1024);
+    const saved = out.originalBytes ? Math.max(0, Math.round((1 - out.bytes / out.originalBytes) * 100)) : 0;
+    const meta = $('imgMeta');
+    if (meta) meta.innerHTML = `${out.width}×${out.height}・<b>${kb} KB</b>（q${Math.round(out.quality * 100)}）${out.originalBytes ? `・原 ${fmtBytes(out.originalBytes)}，省 ${saved}%` : ''}`;
+    setStatus(`已載入 ${out.width}×${out.height}・${kb} KB（720p 已壓縮）`, 'ok');
+    // 先建好 VLLM 縮圖，之後每次呼叫都直接重用，不重複編碼
+    buildVlmThumb();
   };
-  reader.readAsDataURL(f);
-  e.target.value = '';
+  img.onerror = () => { setStatus('✗ 圖片載入失敗', 'err'); toast('圖片載入失敗，請換一張試試', 'err'); };
+  img.src = url;
+}
+
+function fmtBytes(n) {
+  if (!n) return '0 B';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+  return (n / 1048576).toFixed(1) + ' MB';
+}
+
+/* 3-6 VLLM 用的 base64：1024 長邊、≤180KB，只算一次 */
+function buildVlmThumb() {
+  if (!currentImage) return Promise.resolve(null);
+  if (vlmThumbCache) return Promise.resolve(vlmThumbCache);
+  const src = img;
+  return new Promise((resolve) => {
+    const W = src.naturalWidth || currentImage.width;
+    const H = src.naturalHeight || currentImage.height;
+    if (!W || !H) { resolve(null); return; }
+    const scale = Math.min(1, VLM_MAX_SIDE / Math.max(W, H));
+    const w = Math.max(1, Math.round(W * scale));
+    const h = Math.max(1, Math.round(H * scale));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(src, 0, 0, w, h);
+    const finish = (blob) => {
+      if (!blob) { resolve(null); return; }
+      const fr = new FileReader();
+      fr.onload = () => {
+        const b64 = String(fr.result).split(',')[1] || '';
+        vlmThumbCache = { b64, bytes: blob.size, w, h };
+        resolve(vlmThumbCache);
+      };
+      fr.onerror = () => resolve(null);
+      fr.readAsDataURL(blob);
+    };
+    // 先 0.85，超過 180KB 再降
+    canvasToBlob(c, 'image/jpeg', 0.85).then(b1 => {
+      if (b1 && b1.size <= VLM_TARGET_BYTES) { finish(b1); return; }
+      canvasToBlob(c, 'image/jpeg', 0.7).then(b2 => {
+        if (b2 && b2.size <= VLM_TARGET_BYTES) { finish(b2); return; }
+        canvasToBlob(c, 'image/jpeg', 0.55).then(finish);
+      });
+    });
+  });
+}
+
+/* 3-7 檔案進來（相簿或系統相機） */
+async function handleFile(e) {
+  const f = e.target && e.target.files && e.target.files[0];
+  if (!f) return;
+  e.target.value = '';                       // 先清空，同一張才能重拍
+  if (!/^image\//.test(f.type || '') && !/\.(jpe?g|png|webp|heic|heif|bmp|gif)$/i.test(f.name || '')) {
+    toast('請選擇圖片檔', 'err');
+    return;
+  }
+  setStatus('處理圖片中…');
+  try {
+    const out = await prepareImage(f, { maxSide: IMG_MAX_SIDE });
+    applyImage(out);
+  } catch (err) {
+    setStatus('✗ 圖片處理失敗', 'err');
+    toast('圖片處理失敗：' + briefErr(err), 'err', 4200);
+  }
+}
+
+/* ============================================================
+   3-8 內建相機：直接以 720p 取景，完全不產生 12MP 大檔
+   ============================================================ */
+let camStream = null, camEls = null, camFacing = 'environment', camEsc = null;
+
+function cameraSupported() {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && (window.isSecureContext !== false);
+}
+
+function openCamera() {
+  if (!cameraSupported()) {
+    toast('此環境不支援內建相機，改用系統拍照', 'warn', 2600);
+    $('camera').click();
+    return;
+  }
+  startCamera('environment');
+}
+
+async function startCamera(facing) {
+  closeCamera();
+  const mask = document.createElement('div');
+  mask.className = 'cam-mask';
+  mask.innerHTML = `
+    <video id="camVideo" playsinline autoplay muted></video>
+    <div class="cam-hint">對準畫面後按紅色快門・直接以 720p 擷取（約 100–200KB）</div>
+    <div class="cam-bar">
+      <button class="btn gray sm" id="camSwitch">🔄 切換鏡頭</button>
+      <button class="cam-shot" id="camShot" title="拍照"></button>
+      <button class="btn gray sm" id="camCancel">✕ 取消</button>
+    </div>
+    <button class="btn gray sm" id="camNative" style="font-size:12px;opacity:.75">改用系統相機（畫質更好）</button>`;
+  document.body.appendChild(mask);
+  const video = mask.querySelector('#camVideo');
+  camEls = { mask, video };
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: { ideal: facing },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    });
+  } catch (err) {
+    closeCamera();
+    toast('無法開啟相機（' + briefErr(err) + '），改用系統拍照', 'warn', 3200);
+    $('camera').click();
+    return;
+  }
+  video.srcObject = camStream;
+  try { await video.play(); } catch (e) {}
+
+  mask.querySelector('#camShot').addEventListener('click', captureFromVideo);
+  mask.querySelector('#camCancel').addEventListener('click', closeCamera);
+  mask.querySelector('#camNative').addEventListener('click', () => { closeCamera(); $('camera').click(); });
+  mask.querySelector('#camSwitch').addEventListener('click', () => {
+    camFacing = camFacing === 'environment' ? 'user' : 'environment';
+    startCamera(camFacing);
+  });
+  // 按 Esc 或點黑底也能關閉
+  mask.addEventListener('click', e => { if (e.target === mask) closeCamera(); });
+  camEsc = (e) => { if (e.key === 'Escape') closeCamera(); };
+  document.addEventListener('keydown', camEsc);
+}
+
+function closeCamera() {
+  if (camEsc) { try { document.removeEventListener('keydown', camEsc); } catch (e) {} camEsc = null; }
+  if (camStream) { camStream.getTracks().forEach(t => { try { t.stop(); } catch (e) {} }); camStream = null; }
+  if (camEls) {
+    if (camEls.video) { try { camEls.video.srcObject = null; } catch (e) {} }
+    if (camEls.mask && camEls.mask.parentNode) camEls.mask.parentNode.removeChild(camEls.mask);
+    camEls = null;
+  }
+}
+
+async function captureFromVideo() {
+  if (!camEls || !camEls.video) return;
+  const v = camEls.video;
+  const vw = v.videoWidth || 1280, vh = v.videoHeight || 720;
+  if (!vw || !vh) { toast('相機還沒準備好，請稍候', 'warn'); return; }
+  const shot = document.createElement('canvas');
+  const scale = Math.min(1, IMG_MAX_SIDE / Math.max(vw, vh));
+  shot.width = Math.round(vw * scale);
+  shot.height = Math.round(vh * scale);
+  const ctx = shot.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(v, 0, 0, shot.width, shot.height);
+  closeCamera();
+  setStatus('處理照片中…');
+  try {
+    let blob = null, usedQ = 0.85;
+    for (const q of [0.85, 0.72, 0.6, 0.5]) {   // 逐階降品質，鎖在 200KB 內
+      blob = await canvasToBlob(shot, 'image/jpeg', q);
+      usedQ = q;
+      if (blob && blob.size <= IMG_TARGET_MAX) break;
+    }
+    if (!blob) throw new Error('擷取失敗');
+    applyImage({ blob, width: shot.width, height: shot.height, quality: usedQ, bytes: blob.size, originalBytes: 0, from: 'camera' });
+  } catch (err) {
+    setStatus('✗ 拍照失敗', 'err');
+    toast('拍照失敗：' + briefErr(err), 'err');
+  }
 }
 
 img.addEventListener('dblclick', e => {
@@ -815,8 +1121,38 @@ async function ollamaChat({ model, prompt, image, json, timeoutMs }) {
   return { text: m.content || (m.thinking || ''), raw: data };
 }
 
-function makeThumb(maxSide) { const W = img.naturalWidth, H = img.naturalHeight; const s = Math.min(1, (maxSide || 1024) / Math.max(W, H)); const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(W * s)); c.height = Math.max(1, Math.round(H * s)); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.9).split(',')[1]; }
-function cropAround(x, y) { const W = img.naturalWidth, H = img.naturalHeight; let cw = Math.min(W, Math.max(240, W * 0.36)), ch = Math.min(H, Math.max(240, H * 0.36)); let sx = Math.max(0, Math.min(x * W - cw / 2, W - cw)), sy = Math.max(0, Math.min(y * H - ch / 2, H - ch)); const c = document.createElement('canvas'); c.width = Math.round(cw); c.height = Math.round(ch); c.getContext('2d').drawImage(img, sx, sy, cw, ch, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.9).split(',')[1]; }
+/* VLLM 縮圖：優先用載入時就建好的快取（1024 長邊、≤180KB），不重複編碼 */
+function makeThumb(maxSide) {
+  const want = maxSide || VLM_MAX_SIDE;
+  if (vlmThumbCache && vlmThumbCache.b64 && want >= VLM_MAX_SIDE) return vlmThumbCache.b64;
+  if (!vlmThumbCache) buildVlmThumb();          // 背景補建，下一次就命中
+  const W = img.naturalWidth, H = img.naturalHeight;
+  if (!W || !H) return '';
+  const s = Math.min(1, want / Math.max(W, H));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(W * s));
+  c.height = Math.max(1, Math.round(H * s));
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.78).split(',')[1];
+}
+/* 局部裁切：控制在 640px 內，單張約 40–90KB */
+function cropAround(x, y) {
+  const W = img.naturalWidth, H = img.naturalHeight;
+  let cw = Math.min(W, Math.max(240, W * 0.36)), ch = Math.min(H, Math.max(240, H * 0.36));
+  const cap = 640;
+  if (Math.max(cw, ch) > cap) { const k = cap / Math.max(cw, ch); cw *= k; ch *= k; }
+  let sx = Math.max(0, Math.min(x * W - cw / 2, W - cw)), sy = Math.max(0, Math.min(y * H - ch / 2, H - ch));
+  const c = document.createElement('canvas');
+  c.width = Math.round(cw); c.height = Math.round(ch);
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, sx, sy, cw, ch, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.8).split(',')[1];
+}
 
 /* ============================================================
    6. 清洗
@@ -1996,6 +2332,13 @@ function runSelfTest() {
     LS.set('kw.groqKey', k1 || ''); LS.set('kw.deepseekKey', k2 || '');
     const chainOk = chain[0] === 'groq:qwen/qwen3.8-27b' && chain.indexOf('deepseek:deepseek-flash') > 0 && chain.indexOf('groq:openai/gpt-oss-120b') < 0;
     add('模型自動接手鏈', chainOk && typeof toast === 'function', chain.join(' → '));
+
+    const imgOk = IMG_MAX_SIDE === 1280 && IMG_TARGET_MAX <= 200 * 1024 && VLM_TARGET_BYTES <= 200 * 1024
+      && typeof resizeImageForVllm === 'function' && typeof prepareImage === 'function'
+      && typeof encodeWithinBudget === 'function' && typeof openCamera === 'function'
+      && typeof captureFromVideo === 'function' && typeof closeCamera === 'function';
+    const cur = currentImage ? `${currentImage.width}×${currentImage.height}・${Math.round(currentImage.bytes / 1024)}KB` : '尚未載入圖片';
+    add('影像壓縮管線', imgOk, `長邊 ${IMG_MAX_SIDE}（720p）・目標 ${Math.round(IMG_TARGET_MIN / 1024)}–${Math.round(IMG_TARGET_MAX / 1024)}KB・VLLM ${Math.round(VLM_TARGET_BYTES / 1024)}KB｜目前 ${cur}`);
 
     const gen = buildExamplesForWords(CORE_NOUNS);
     const values = Object.keys(gen).map(k => gen[k]);
