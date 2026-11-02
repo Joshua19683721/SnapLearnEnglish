@@ -37,7 +37,7 @@
   .view.active { display: flex; }
 
   /* === View 1: Visual Map (標註) === */
-  #view-visual { flex-direction: row; min-height: 0; }
+  #view-visual { flex-direction: row; min-height: 0; position: relative; }
   .stage-wrap { flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px; }
   #stage { position: relative; display: inline-block; max-width: 100%; }
   #stage img { display: block; max-width: 100%; height: auto; user-select: none; }
@@ -49,7 +49,14 @@
   .label.free { outline: 2px dashed #f59e0b; outline-offset: 3px; }
   .label.sus { outline: 2px dashed #ef4444; outline-offset: 3px; }
 
-  .panel { width: 320px; background: #2a2e37; padding: 16px; overflow-y: auto; border-left: 1px solid #3a3f4b; flex-shrink: 0; }
+  .panel { width: 320px; background: #2a2e37; padding: 16px; overflow-y: auto; border-left: 1px solid #3a3f4b; flex-shrink: 0; transition: width .18s ease; }
+  .panel.collapsed { display: none; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .panel .panel-head h2 { margin: 0; font-size: 14px; color: #9ca3af; }
+  .panel-toggle { background: #1e2128; border: 1px solid #4b5563; color: #9ca3af; border-radius: 6px; padding: 4px 9px; font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap; transition: all .2s; }
+  .panel-toggle:hover { color: #e8e8e8; border-color: #3b82f6; }
+  .panel-open-btn { position: absolute; top: 10px; right: 12px; z-index: 40; background: #2a2e37ee; border: 1px solid #4b5563; color: #e8e8e8; border-radius: 999px; padding: 6px 13px; font-size: 12px; cursor: pointer; font-family: inherit; box-shadow: 0 4px 14px #0008; backdrop-filter: blur(4px); }
+  .panel-open-btn:hover { border-color: #3b82f6; color: #fff; }
   .panel h2 { font-size: 14px; margin-bottom: 10px; color: #9ca3af; margin-top: 16px; }
   .panel h2:first-child { margin-top: 0; }
   .field { margin-bottom: 12px; }
@@ -294,12 +301,16 @@
 
   <!-- ============ View 1: Visual Map ============ -->
   <div id="view-visual" class="view active">
+    <button class="panel-open-btn" id="panelOpenBtn" onclick="togglePanel()" style="display:none" title="展開辨識設定">⚙️ 辨識設定</button>
     <div class="stage-wrap">
       <div id="stage"><img id="img" alt=""></div>
       <div class="img-meta" id="imgMeta"></div>
     </div>
-    <div class="panel">
-      <h2>辨識設定</h2>
+    <div class="panel" id="sidePanel">
+      <div class="panel-head">
+        <h2>辨識設定</h2>
+        <button class="panel-toggle" onclick="togglePanel()" title="收合側欄，讓圖片放到最大">收合 ⟩</button>
+      </div>
       <div class="field">
         <label>視覺模型（看圖用）</label>
         <select id="modelSel"></select>
@@ -748,8 +759,15 @@ function fitImageToStage() {
   if (!wrap || !img.naturalWidth) return;
   const meta = $('imgMeta');
   const metaH = (meta && meta.offsetHeight) ? meta.offsetHeight + 6 : 0;
-  const availW = wrap.clientWidth - 32;
-  const availH = wrap.clientHeight - 32 - metaH;
+  // 實際 padding 可能被 media query 改掉，直接讀算好的值
+  let padX = 32, padY = 32;
+  if (typeof getComputedStyle === 'function') {
+    const cs = getComputedStyle(wrap);
+    padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  }
+  const availW = wrap.clientWidth - padX;
+  const availH = wrap.clientHeight - padY - metaH;
   if (availW <= 40 || availH <= 40) return;
   img.style.maxWidth = availW + 'px';
   img.style.maxHeight = availH + 'px';
@@ -759,6 +777,25 @@ function fitImageToStage() {
 }
 if (typeof window !== 'undefined' && window.addEventListener) {
   window.addEventListener('resize', () => { if (currentTab === 'visual') fitImageToStage(); });
+}
+
+/* 辨識設定側欄收合：收起來就讓圖片吃滿整個寬度 */
+let panelCollapsed = false;
+
+function applyPanelState() {
+  const panel = $('sidePanel'), openBtn = $('panelOpenBtn');
+  if (panel) panel.classList.toggle('collapsed', panelCollapsed);
+  if (openBtn) openBtn.style.display = panelCollapsed ? 'inline-block' : 'none';
+  // 佈局變了，重新算圖片可用空間
+  const raf = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : (cb => setTimeout(cb, 0));
+  raf(() => fitImageToStage());
+}
+
+function togglePanel(force, silent) {
+  panelCollapsed = (typeof force === 'boolean') ? force : !panelCollapsed;
+  LS.set('kw.panelCollapsed', panelCollapsed ? '1' : '0');
+  applyPanelState();
+  if (panelCollapsed && !silent) toast('已收合設定，圖片放到最大', 'ok', 1600);
 }
 
 function fmtBytes(n) {
@@ -2745,6 +2782,17 @@ function runSelfTest() {
     add('圖卡連續播放', playApiOk && uiOn && uiOff,
       playApiOk ? '基礎／進階兩顆喇叭＋停止鈕就緒（單字→例句→下一張）' : '播放控制項缺少');
 
+    // --- 側欄收合 ---
+    const panel = $('sidePanel'), openBtn = $('panelOpenBtn');
+    const wasCollapsed = panelCollapsed;
+    togglePanel(true, true);
+    const collapsedOk = panel.classList.contains('collapsed') && openBtn.style.display === 'inline-block';
+    togglePanel(false, true);
+    const expandedOk = !panel.classList.contains('collapsed') && openBtn.style.display === 'none';
+    togglePanel(wasCollapsed, true);
+    add('辨識設定可收合', !!panel && !!openBtn && collapsedOk && expandedOk,
+      collapsedOk && expandedOk ? '收合後側欄隱藏、圖片吃滿寬度，可再展開' : '收合狀態切換異常');
+
     // --- 測驗雙模式 ---
     quizMode = 'type';
     const qsType = buildQuizQuestions();
@@ -2807,6 +2855,8 @@ fillModelSelects();
 (function initTarget() { const el = $('targetCount'); const v = LS.get('kw.target'); if (v) el.value = v; el.addEventListener('change', () => { el.value = Math.max(1, Math.min(20, parseInt(el.value,10)||10)); LS.set('kw.target', el.value); }); })();
 setStatus('待命');
 updateModeTabs();
+panelCollapsed = LS.get('kw.panelCollapsed') === '1';
+applyPanelState();
 
 // PWA Service Worker 註冊
 if ('serviceWorker' in navigator) {

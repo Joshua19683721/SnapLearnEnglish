@@ -55,6 +55,7 @@ vm.runInContext(code + `
   playAllCards, stopPlayAll, updateFlashcard, renderCards,
   isPlaying: () => playRunning,
   setQuizMode, startQuiz, selectOption, confirmAnswer, nextQuestion,
+  togglePanel, isPanelCollapsed: () => panelCollapsed,
   getQuiz: () => ({ mode: quizMode, qs: quizQuestions, idx: quizIndex, score: quizScore, sel: selectedOption, answered: quizAnswered }),
   DEMO_LABELS, buildExamplesForWords
 };`, sandbox, { filename: 'x' });
@@ -156,6 +157,19 @@ function check(name, ok, detail) {
   const panelHasSentence = /<div class="panel">[\s\S]*?id="sentenceBox"[\s\S]*?<\/div>\s*<\/div>\s*<!-- ============ View 2: Sentence/.test(html);
   check('分頁順序：實景熱點 → 圖片句子 → 單字圖卡', orderOk && boxOk && !panelHasSentence,
     `句子區塊在獨立分頁（不在辨識設定面板內）`);
+
+  // 10. 側欄收合：結構 + 行為
+  const hasPanel = html.indexOf('id="sidePanel"') > 0;
+  const hasToggle = html.indexOf('onclick="togglePanel()"') > 0;
+  const hasOpenBtn = html.indexOf('id="panelOpenBtn"') > 0;
+  const collapsedBefore = sandbox.__api.isPanelCollapsed();
+  sandbox.__api.togglePanel(true, true);
+  const afterCollapse = sandbox.__api.isPanelCollapsed();
+  const clsOk = document.getElementById('sidePanel').classList.contains('collapsed');
+  sandbox.__api.togglePanel(false, true);
+  const afterExpand = sandbox.__api.isPanelCollapsed();
+  check('辨識設定可收合', hasPanel && hasToggle && hasOpenBtn && afterCollapse && clsOk && !afterExpand,
+    `收合前 ${collapsedBefore} → 收合 ${afterCollapse}（面板隱藏 ${clsOk}）→ 展開 ${afterExpand}`);
 
   console.log(`\n${fail === 0 ? '全部通過' : '有失敗'}：${pass}/${pass + fail}`);
   process.exit(fail === 0 ? 0 : 1);
